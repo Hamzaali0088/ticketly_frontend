@@ -10,6 +10,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getEventById } from '@/data/mockData';
 import { useAppStore } from '@/store/useAppStore';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function TicketScreen() {
   const router = useRouter();
@@ -57,7 +58,7 @@ export default function TicketScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backIcon}>←</Text>
+          <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Your Ticket</Text>
         <View style={{ width: 30 }} />
@@ -89,7 +90,7 @@ export default function TicketScreen() {
           <Text style={styles.organizerName}>by {event.organizerName}</Text>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📅</Text>
+            <MaterialIcons name="calendar-today" size={20} color="#9CA3AF" style={styles.infoIcon} />
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Date</Text>
               <Text style={styles.infoValue}>
@@ -99,7 +100,7 @@ export default function TicketScreen() {
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📍</Text>
+            <MaterialIcons name="location-on" size={20} color="#9CA3AF" style={styles.infoIcon} />
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Venue</Text>
               <Text style={styles.infoValue}>{event.venue}</Text>
@@ -108,7 +109,7 @@ export default function TicketScreen() {
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>👤</Text>
+            <MaterialIcons name="person-outline" size={20} color="#9CA3AF" style={styles.infoIcon} />
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Attendee</Text>
               <Text style={styles.infoValue}>{user.name}</Text>
@@ -183,11 +184,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
-  backIcon: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '700',
-  },
   headerTitle: {
     color: '#FFFFFF',
     fontSize: 20,
@@ -254,7 +250,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   infoIcon: {
-    fontSize: 20,
     marginRight: 12,
     marginTop: 2,
   },

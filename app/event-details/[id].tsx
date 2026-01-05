@@ -12,6 +12,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
 import { getEventById } from '@/data/mockData';
 import { Modal } from '@/components/Modal';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function EventDetailsScreen() {
   const router = useRouter();
@@ -132,13 +133,17 @@ export default function EventDetailsScreen() {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.backIcon}>←</Text>
+            <MaterialIcons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.likeButton}
             onPress={handleLike}
           >
-            <Text style={styles.likeIcon}>{isLiked ? '❤️' : '🤍'}</Text>
+            <MaterialIcons 
+              name={isLiked ? "favorite" : "favorite-border"} 
+              size={20} 
+              color={isLiked ? "#EF4444" : "#FFFFFF"} 
+            />
           </TouchableOpacity>
         </View>
 
@@ -156,7 +161,7 @@ export default function EventDetailsScreen() {
           {/* Registration Deadline */}
           {event.registrationDeadline && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>⏰</Text>
+              <MaterialIcons name="access-time" size={20} color="#9CA3AF" style={styles.infoIcon} />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Registration Deadline</Text>
                 <Text style={styles.infoValue}>
@@ -173,7 +178,7 @@ export default function EventDetailsScreen() {
 
           {/* Event Date & Time */}
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📅</Text>
+            <MaterialIcons name="calendar-today" size={20} color="#9CA3AF" style={styles.infoIcon} />
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Event Date & Time</Text>
               <Text style={styles.infoValue}>
@@ -189,18 +194,18 @@ export default function EventDetailsScreen() {
 
           {/* Location */}
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📍</Text>
+            <MaterialIcons name="location-on" size={20} color="#9CA3AF" style={styles.infoIcon} />
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Location</Text>
               <Text style={styles.infoValue}>{event.venue}</Text>
               <Text style={styles.infoValue}>{event.city}</Text>
             </View>
-            <Text style={styles.arrowIcon}>→</Text>
+            <MaterialIcons name="arrow-forward" size={20} color="#9CA3AF" style={styles.arrowIcon} />
           </View>
 
           {/* Price */}
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>🎫</Text>
+            <MaterialIcons name="confirmation-number" size={20} color="#9CA3AF" style={styles.infoIcon} />
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Registration Starting From</Text>
               <Text style={styles.infoValue}>
@@ -236,7 +241,7 @@ export default function EventDetailsScreen() {
           
           <TouchableOpacity style={styles.viewMoreButton}>
             <Text style={styles.viewMoreText}>View more</Text>
-            <Text style={styles.chevron}>⌄</Text>
+            <MaterialIcons name="expand-more" size={16} color="#9333EA" />
           </TouchableOpacity>
         </View>
 
@@ -296,11 +301,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backIcon: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-  },
   likeButton: {
     position: 'absolute',
     top: 50,
@@ -311,9 +311,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  likeIcon: {
-    fontSize: 20,
   },
   infoCard: {
     backgroundColor: '#1F1F1F',
@@ -352,7 +349,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   infoIcon: {
-    fontSize: 20,
     marginRight: 12,
     marginTop: 2,
   },
@@ -376,9 +372,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   arrowIcon: {
-    color: '#9CA3AF',
-    fontSize: 20,
     marginLeft: 8,
+    marginTop: 2,
   },
   registerButton: {
     backgroundColor: '#9333EA',
@@ -434,10 +429,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginRight: 4,
-  },
-  chevron: {
-    color: '#9333EA',
-    fontSize: 14,
   },
   organizerSection: {
     padding: 20,

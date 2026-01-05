@@ -15,6 +15,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { mockUser } from '@/data/mockData';
 import { Modal } from '@/components/Modal';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 interface EventFormData {
   // Step 1
@@ -117,7 +118,7 @@ export default function CreateEventScreen() {
         >
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()}>
-              <Text style={styles.backIcon}>←</Text>
+              <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Create Event</Text>
             <View style={{ width: 30 }} />
@@ -148,7 +149,7 @@ export default function CreateEventScreen() {
             <View style={styles.phoneContainer}>
               <TouchableOpacity style={styles.countryCode}>
                 <Text style={styles.countryCodeText}>PK</Text>
-                <Text style={styles.dropdownIcon}>⌄</Text>
+                <MaterialIcons name="expand-more" size={16} color="#9CA3AF" />
               </TouchableOpacity>
               <TextInput
                 style={[styles.input, styles.phoneInput]}
@@ -201,7 +202,7 @@ export default function CreateEventScreen() {
                     })
                   : 'Select Date'}
               </Text>
-              <Text style={styles.dropdownIcon}>⌄</Text>
+              <MaterialIcons name="expand-more" size={16} color="#9CA3AF" />
             </TouchableOpacity>
 
             {showDatePicker && (
@@ -249,7 +250,7 @@ export default function CreateEventScreen() {
       >
         <View style={styles.header}>
           <TouchableOpacity onPress={handleStep2Back}>
-            <Text style={styles.backIcon}>←</Text>
+            <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Create Event</Text>
           <View style={{ width: 30 }} />
@@ -270,7 +271,7 @@ export default function CreateEventScreen() {
                   })
                 : 'Select Date'}
             </Text>
-            <Text style={styles.dropdownIcon}>⌄</Text>
+            <MaterialIcons name="expand-more" size={16} color="#9CA3AF" />
           </TouchableOpacity>
 
           {showDatePicker && (
@@ -293,7 +294,7 @@ export default function CreateEventScreen() {
             <Text style={[styles.dropdownText, !formData.eventCity && styles.placeholder]}>
               {formData.eventCity || 'Select City'}
             </Text>
-            <Text style={styles.dropdownIcon}>⌄</Text>
+            <MaterialIcons name="expand-more" size={16} color="#9CA3AF" />
           </TouchableOpacity>
 
           <Text style={styles.label}>Event Category</Text>
@@ -313,7 +314,7 @@ export default function CreateEventScreen() {
             <Text style={[styles.dropdownText, !formData.eventCategory && styles.placeholder]}>
               {formData.eventCategory || 'Select Category'}
             </Text>
-            <Text style={styles.dropdownIcon}>⌄</Text>
+            <MaterialIcons name="expand-more" size={16} color="#9CA3AF" />
           </TouchableOpacity>
 
           <Text style={styles.label}>What is your event about</Text>
@@ -365,11 +366,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
-  backIcon: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '700',
-  },
   headerTitle: {
     color: '#FFFFFF',
     fontSize: 20,
@@ -418,10 +414,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-  },
-  dropdownIcon: {
-    color: '#9CA3AF',
-    fontSize: 16,
   },
   phoneInput: {
     flex: 1,

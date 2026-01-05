@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function CreateTabScreen() {
     const router = useRouter();
@@ -8,7 +9,7 @@ export default function CreateTabScreen() {
     return (
         <View style={styles.container}>
             <View style={styles.content}>
-                <Text style={styles.icon}>➕</Text>
+                <MaterialIcons name="add-circle-outline" size={64} color="#9333EA" />
                 <Text style={styles.title}>Create Event</Text>
                 <Text style={styles.subtitle}>
                     Start creating amazing events and reach your audience
@@ -37,7 +38,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 40,
     },
     icon: {
-        fontSize: 64,
         marginBottom: 24,
     },
     title: {

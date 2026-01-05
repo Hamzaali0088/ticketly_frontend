@@ -1,17 +1,17 @@
+import { EventCard } from '@/components/EventCard';
+import { mockEvents } from '@/data/mockData';
+import { useAppStore } from '@/store/useAppStore';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  View,
+  Dimensions,
+  Image,
+  ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Image,
-  Dimensions,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAppStore } from '@/store/useAppStore';
-import { mockEvents } from '@/data/mockData';
-import { EventCard } from '@/components/EventCard';
 
 const { width } = Dimensions.get('window');
 
@@ -84,30 +84,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => router.push('/(tabs)/explore')}
-          >
-            <Text style={styles.actionIcon}>🔍</Text>
-            <Text style={styles.actionText}>Explore</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => router.push('/create-event')}
-          >
-            <Text style={styles.actionIcon}>➕</Text>
-            <Text style={styles.actionText}>Create Event</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => router.push('/(tabs)/profile')}
-          >
-            <Text style={styles.actionIcon}>👤</Text>
-            <Text style={styles.actionText}>Profile</Text>
-          </TouchableOpacity>
-        </View>
+
 
         {/* Upcoming Events */}
         <View style={styles.section}>
