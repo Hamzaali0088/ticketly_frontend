@@ -1,19 +1,11 @@
 import { useEffect } from 'react';
-import { useRouter } from 'expo-router';
-import { useAppStore } from '@/store/useAppStore';
+import { useRouter, Redirect } from 'expo-router';
 
 export default function Index() {
   const router = useRouter();
-  const isAuthenticated = useAppStore((state) => state.isAuthenticated);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.replace('/(tabs)');
-    } else {
-      router.replace('/login');
-    }
-  }, [isAuthenticated]);
-
-  return null;
+  // Immediately redirect to tabs (home page) on app start
+  // Login will only be shown when user tries to perform actions that require authentication
+  return <Redirect href="/(tabs)" />;
 }
 

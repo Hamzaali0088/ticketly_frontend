@@ -1,19 +1,63 @@
 import { EventCard } from '@/components/EventCard';
 import { useAppStore } from '@/store/useAppStore';
+import { eventsAPI } from '@/lib/api/events';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   FlatList,
   StyleSheet,
   Text,
   TextInput,
-  View
+  View,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import type { Event } from '@/lib/api/events';
+
+// Helper function to convert API event to app event format
+const convertEvent = (apiEvent: Event) => ({
+  id: apiEvent._id,
+  title: apiEvent.title,
+  description: apiEvent.description,
+  date: apiEvent.date,
+  time: apiEvent.time,
+  venue: apiEvent.location,
+  city: apiEvent.location.split(',')[0] || apiEvent.location,
+  category: 'Event',
+  image: apiEvent.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
+  organizerId: apiEvent.createdBy?._id || '',
+  organizerName: apiEvent.createdBy?.fullName || 'Organizer',
+  price: apiEvent.ticketPrice,
+  accessType: apiEvent.ticketPrice > 0 ? 'paid' as const : 'open' as const,
+  registeredUsers: [],
+  likedUsers: [],
+});
 
 export default function ExploreScreen() {
   const router = useRouter();
   const events = useAppStore((state) => state.events);
+  const setEvents = useAppStore((state) => state.setEvents);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      const response = await eventsAPI.getApprovedEvents();
+      if (response.success && response.events) {
+        const convertedEvents = response.events.map(convertEvent);
+        setEvents(convertedEvents);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to load events');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredEvents = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -28,6 +72,14 @@ export default function ExploreScreen() {
         event.city.toLowerCase().includes(query)
     );
   }, [events, searchQuery]);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#9333EA" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

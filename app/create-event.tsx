@@ -12,10 +12,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
-import { mockUser } from '@/data/mockData';
+import { eventsAPI } from '@/lib/api/events';
 import { Modal } from '@/components/Modal';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { ActivityIndicator } from 'react-native';
 
 interface EventFormData {
   // Step 1
@@ -34,17 +35,16 @@ interface EventFormData {
 
 export default function CreateEventScreen() {
   const router = useRouter();
-  const user = useAppStore((state) => state.user) || mockUser;
-  const addEvent = useAppStore((state) => state.addEvent);
-  
+  const user = useAppStore((state) => state.user);
   const [step, setStep] = useState(1);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<EventFormData>({
-    name: user.name,
-    email: user.email,
-    phone: user.phone || '',
-    companyName: user.companyName || '',
+    name: user?.fullName || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    companyName: user?.companyName || '',
     eventName: '',
     eventLocation: '',
     eventDate: null,
@@ -71,33 +71,47 @@ export default function CreateEventScreen() {
     setStep(1);
   };
 
-  const handleSubmit = () => {
-    if (!formData.eventCategory || !formData.description) {
+  const handleSubmit = async () => {
+    if (!formData.eventCategory || !formData.description || !formData.eventDate) {
       Alert.alert('Validation Error', 'Please fill in all required fields');
       return;
     }
 
-    // Create new event
-    const newEvent = {
-      id: `event-${Date.now()}`,
-      title: formData.eventName,
-      description: formData.description,
-      fullDescription: formData.description,
-      date: formData.eventDate!.toISOString().split('T')[0],
-      time: '7:00 PM',
-      venue: formData.eventLocation,
-      city: formData.eventCity,
-      category: formData.eventCategory,
-      image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
-      organizerId: user.id,
-      organizerName: formData.companyName || user.name || 'Event Organizer',
-      accessType: 'open' as const,
-      registeredUsers: [],
-      likedUsers: [],
-    };
+    const isAuthenticated = useAppStore.getState().isAuthenticated;
+    if (!isAuthenticated) {
+      Alert.alert('Login Required', 'Please login to create an event', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => router.push('/login') },
+      ]);
+      return;
+    }
 
-    addEvent(newEvent);
-    setShowSuccessModal(true);
+    setLoading(true);
+    try {
+      const eventDate = formData.eventDate.toISOString().split('T')[0];
+      const response = await eventsAPI.createEvent({
+        title: formData.eventName,
+        description: formData.description,
+        date: eventDate,
+        time: '18:00', // Default time
+        location: `${formData.eventLocation}, ${formData.eventCity}`,
+        image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
+        email: formData.email,
+        phone: formData.phone,
+        ticketPrice: 0, // Default price
+        totalTickets: 100, // Default tickets
+      });
+
+      if (response.success) {
+        setShowSuccessModal(true);
+      } else {
+        Alert.alert('Error', response.message || 'Failed to create event');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to create event. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSuccessClose = () => {
@@ -196,10 +210,10 @@ export default function CreateEventScreen() {
               <Text style={[styles.datePickerText, !formData.eventDate && styles.placeholder]}>
                 {formData.eventDate
                   ? formData.eventDate.toLocaleDateString('en-US', {
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })
                   : 'Select Date'}
               </Text>
               <MaterialIcons name="expand-more" size={16} color="#9CA3AF" />
@@ -265,10 +279,10 @@ export default function CreateEventScreen() {
             <Text style={[styles.datePickerText, !formData.eventDate && styles.placeholder]}>
               {formData.eventDate
                 ? formData.eventDate.toLocaleDateString('en-US', {
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })
                 : 'Select Date'}
             </Text>
             <MaterialIcons name="expand-more" size={16} color="#9CA3AF" />
@@ -329,8 +343,16 @@ export default function CreateEventScreen() {
             textAlignVertical="top"
           />
 
-          <TouchableOpacity style={styles.createButton} onPress={handleSubmit}>
-            <Text style={styles.createButtonText}>Create Event</Text>
+          <TouchableOpacity
+            style={[styles.createButton, loading && styles.createButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.createButtonText}>Create Event</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -474,6 +496,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  createButtonDisabled: {
+    opacity: 0.6,
   },
 });
 

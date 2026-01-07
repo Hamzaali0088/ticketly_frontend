@@ -1,53 +1,138 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
 import { EventCard } from '@/components/EventCard';
+import { authAPI } from '@/lib/api/auth';
+import { eventsAPI } from '@/lib/api/events';
+import type { Event } from '@/lib/api/events';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+
+// Helper function to convert API event to app event format
+const convertEvent = (apiEvent: Event) => ({
+  id: apiEvent._id,
+  title: apiEvent.title,
+  description: apiEvent.description,
+  date: apiEvent.date,
+  time: apiEvent.time,
+  venue: apiEvent.location,
+  city: apiEvent.location.split(',')[0] || apiEvent.location,
+  category: 'Event',
+  image: apiEvent.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
+  organizerId: apiEvent.createdBy?._id || '',
+  organizerName: apiEvent.createdBy?.fullName || 'Organizer',
+  price: apiEvent.ticketPrice,
+  accessType: apiEvent.ticketPrice > 0 ? 'paid' as const : 'open' as const,
+  registeredUsers: [],
+  likedUsers: [],
+});
 
 export default function ProfileScreen() {
   const router = useRouter();
   const user = useAppStore((state) => state.user);
   const logout = useAppStore((state) => state.logout);
-  const events = useAppStore((state) => state.events);
+  const setUser = useAppStore((state) => state.setUser);
   const [activeTab, setActiveTab] = useState<'created' | 'joined' | 'liked'>('created');
+  const [loading, setLoading] = useState(false);
+  const [myEvents, setMyEvents] = useState<any[]>([]);
+  const hasLoadedRef = useRef(false);
+  const currentUserIdRef = useRef<string | null>(null);
 
+  useEffect(() => {
+    // Only load if user exists and we haven't loaded for this user ID yet
+    if (user?._id) {
+      // If user ID changed, reset the loaded flag
+      if (currentUserIdRef.current !== user._id) {
+        currentUserIdRef.current = user._id;
+        hasLoadedRef.current = false;
+      }
+      
+      // Load data only once per user
+      if (!hasLoadedRef.current) {
+        hasLoadedRef.current = true;
+        loadMyEvents();
+        // Skip loadProfile to avoid loop - user data is already in store from login
+        // loadProfile();
+      }
+    }
+  }, [user?._id]); // Only depend on user ID, not the entire user object
+
+  const loadProfile = async () => {
+    try {
+      const response = await authAPI.getProfile();
+      if (response.success && response.user) {
+        // Only update if user ID is different (prevents loop)
+        if (user?._id !== response.user._id) {
+          setUser(response.user);
+        }
+      }
+    } catch (error: any) {
+      console.error('Failed to load profile:', error);
+    }
+  };
+
+  const loadMyEvents = async () => {
+    try {
+      setLoading(true);
+      const response = await eventsAPI.getMyEvents();
+      if (response.success && response.events) {
+        const convertedEvents = response.events.map(convertEvent);
+        setMyEvents(convertedEvents);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to load events');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Show login option if user is not authenticated
   if (!user) {
     return (
       <View style={styles.container}>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Please login to view profile</Text>
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={() => router.push('/login')}
-          >
-            <Text style={styles.loginButtonText}>Login</Text>
-          </TouchableOpacity>
-        </View>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyTitle}>Welcome to Ticketly</Text>
+            <Text style={styles.emptyText}>
+              Login to create events, register for events, and manage your profile
+            </Text>
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => router.push('/login')}
+            >
+              <Text style={styles.loginButtonText}>Login / Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </View>
     );
   }
 
   // Filter events based on user's actions
-  const createdEvents = events.filter((event) => event.organizerId === user.id);
-  const joinedEvents = events.filter((event) => event.registeredUsers.includes(user.id));
-  const likedEvents = events.filter((event) => event.likedUsers.includes(user.id));
+  const createdEvents = myEvents.filter((event) => event.organizerId === user?._id);
+  const joinedEvents: any[] = []; // Will be implemented when ticket/registration API is available
+  const likedEvents: any[] = []; // Will be implemented when like API is available
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Logout',
         style: 'destructive',
-        onPress: () => {
-          logout();
+        onPress: async () => {
+          await logout();
           router.replace('/login');
         },
       },
@@ -59,6 +144,14 @@ export default function ProfileScreen() {
     if (activeTab === 'created') eventsToShow = createdEvents;
     else if (activeTab === 'joined') eventsToShow = joinedEvents;
     else eventsToShow = likedEvents;
+
+    if (loading) {
+      return (
+        <View style={styles.emptyEventsContainer}>
+          <ActivityIndicator size="large" color="#9333EA" />
+        </View>
+      );
+    }
 
     if (eventsToShow.length === 0) {
       return (
@@ -90,27 +183,25 @@ export default function ProfileScreen() {
       >
         {/* Profile Header */}
         <View style={styles.header}>
-          <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-              <Text style={styles.avatarText}>
-                {user.name.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.name}>{user.name}</Text>
-              <Text style={styles.email}>{user.email}</Text>
-              {user.companyName && (
-                <Text style={styles.company}>{user.companyName}</Text>
-              )}
-            </View>
-          </View>
-
           <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => Alert.alert('Edit Profile', 'Edit profile feature coming soon')}
+            style={styles.menuButton}
+            onPress={() => router.push('/settings')}
           >
-            <Text style={styles.editButtonText}>Edit</Text>
+            <MaterialIcons name="menu" size={24} color="#FFFFFF" />
           </TouchableOpacity>
+        </View>
+
+        {/* Profile Section - Centered */}
+        <View style={styles.profileSection}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>
+              {user.fullName.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <Text style={styles.name}>{user.fullName}</Text>
+          {user.companyName && (
+            <Text style={styles.company}>{user.companyName}</Text>
+          )}
         </View>
 
         {/* Stats */}
@@ -175,29 +266,8 @@ export default function ProfileScreen() {
         {/* Events List */}
         <View style={styles.eventsSection}>{renderEvents()}</View>
 
-        {/* Settings */}
+        {/* Logout */}
         <View style={styles.settingsSection}>
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => Alert.alert('Change Password', 'Change password feature coming soon')}
-          >
-            <Text style={styles.settingText}>Change Password</Text>
-            <Text style={styles.settingArrow}>›</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => Alert.alert('Edit Email', 'Edit email feature coming soon')}
-          >
-            <Text style={styles.settingText}>Edit Email</Text>
-            <Text style={styles.settingArrow}>›</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => Alert.alert('Privacy Policy', 'Privacy policy coming soon')}
-          >
-            <Text style={styles.settingText}>Privacy Policy</Text>
-            <Text style={styles.settingArrow}>›</Text>
-          </TouchableOpacity>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
@@ -221,59 +291,50 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 24,
+    paddingTop: 20,
+    paddingBottom: 8,
   },
   profileSection: {
-    flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    paddingVertical: 24,
+    paddingBottom: 32,
   },
   avatarContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: '#9333EA',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginBottom: 16,
   },
   avatarText: {
     color: '#FFFFFF',
-    fontSize: 24,
+    fontSize: 40,
     fontWeight: '700',
-  },
-  profileInfo: {
-    flex: 1,
   },
   name: {
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '700',
-    marginBottom: 4,
-  },
-  email: {
-    color: '#9CA3AF',
-    fontSize: 14,
     marginBottom: 4,
   },
   company: {
     color: '#9333EA',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
+    marginTop: 4,
   },
-  editButton: {
+  menuButton: {
     backgroundColor: '#1F1F1F',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    width: 40,
+    height: 40,
     borderRadius: 8,
-  },
-  editButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -373,12 +434,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 40,
+    paddingTop: 100,
+  },
+  emptyTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   emptyText: {
     color: '#9CA3AF',
     fontSize: 16,
-    marginBottom: 24,
+    marginBottom: 32,
     textAlign: 'center',
+    lineHeight: 24,
   },
   loginButton: {
     backgroundColor: '#9333EA',

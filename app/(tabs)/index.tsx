@@ -1,6 +1,6 @@
 import { EventCard } from '@/components/EventCard';
-import { mockEvents } from '@/data/mockData';
 import { useAppStore } from '@/store/useAppStore';
+import { eventsAPI } from '@/lib/api/events';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -11,25 +11,71 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import type { Event } from '@/lib/api/events';
 
 const { width } = Dimensions.get('window');
+
+// Helper function to convert API event to app event format
+const convertEvent = (apiEvent: Event) => ({
+  id: apiEvent._id,
+  title: apiEvent.title,
+  description: apiEvent.description,
+  date: apiEvent.date,
+  time: apiEvent.time,
+  venue: apiEvent.location,
+  city: apiEvent.location.split(',')[0] || apiEvent.location,
+  category: 'Event',
+  image: apiEvent.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
+  organizerId: apiEvent.createdBy?._id || '',
+  organizerName: apiEvent.createdBy?.fullName || 'Organizer',
+  price: apiEvent.ticketPrice,
+  accessType: apiEvent.ticketPrice > 0 ? 'paid' as const : 'open' as const,
+  registeredUsers: [],
+  likedUsers: [],
+});
 
 export default function HomeScreen() {
   const router = useRouter();
   const user = useAppStore((state) => state.user);
   const isAuthenticated = useAppStore((state) => state.isAuthenticated);
-  const [featuredEvent, setFeaturedEvent] = useState(mockEvents[0]);
-  const [upcomingEvents, setUpcomingEvents] = useState(mockEvents.slice(0, 6));
+  const setEvents = useAppStore((state) => state.setEvents);
+  const [featuredEvent, setFeaturedEvent] = useState<any>(null);
+  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.replace('/login');
-    }
-  }, [isAuthenticated]);
+    // Load events on mount - no authentication required
+    loadEvents();
+  }, []);
 
-  if (!isAuthenticated) {
-    return null;
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      const response = await eventsAPI.getApprovedEvents();
+      if (response.success && response.events) {
+        const convertedEvents = response.events.map(convertEvent);
+        setEvents(convertedEvents);
+        setUpcomingEvents(convertedEvents.slice(0, 6));
+        if (convertedEvents.length > 0) {
+          setFeaturedEvent(convertedEvents[0]);
+        }
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to load events');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#9333EA" />
+      </View>
+    );
   }
 
   return (
@@ -51,49 +97,57 @@ export default function HomeScreen() {
         </View>
 
         {/* Featured Event Carousel */}
-        <View style={styles.carouselContainer}>
-          <TouchableOpacity
-            style={styles.featuredCard}
-            onPress={() => router.push(`/event-details/${featuredEvent.id}`)}
-            activeOpacity={0.9}
-          >
-            <Image
-              source={{ uri: featuredEvent.image }}
-              style={styles.featuredImage}
-              resizeMode="cover"
-            />
-            <View style={styles.featuredOverlay}>
-              <View style={styles.featuredContent}>
-                <Text style={styles.featuredTitle} numberOfLines={2}>
-                  {featuredEvent.title}
-                </Text>
-                <Text style={styles.featuredLocation}>{featuredEvent.venue}</Text>
-                <Text style={styles.featuredDate}>
-                  {new Date(featuredEvent.date).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </Text>
+        {featuredEvent && (
+          <View style={styles.carouselContainer}>
+            <TouchableOpacity
+              style={styles.featuredCard}
+              onPress={() => router.push(`/event-details/${featuredEvent.id}`)}
+              activeOpacity={0.9}
+            >
+              <Image
+                source={{ uri: featuredEvent.image }}
+                style={styles.featuredImage}
+                resizeMode="cover"
+              />
+              <View style={styles.featuredOverlay}>
+                <View style={styles.featuredContent}>
+                  <Text style={styles.featuredTitle} numberOfLines={2}>
+                    {featuredEvent.title}
+                  </Text>
+                  <Text style={styles.featuredLocation}>{featuredEvent.venue}</Text>
+                  <Text style={styles.featuredDate}>
+                    {new Date(featuredEvent.date).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </Text>
+                </View>
               </View>
+            </TouchableOpacity>
+            <View style={styles.carouselIndicators}>
+              <View style={[styles.indicator, styles.indicatorActive]} />
+              <View style={styles.indicator} />
+              <View style={styles.indicator} />
             </View>
-          </TouchableOpacity>
-          <View style={styles.carouselIndicators}>
-            <View style={[styles.indicator, styles.indicatorActive]} />
-            <View style={styles.indicator} />
-            <View style={styles.indicator} />
           </View>
-        </View>
+        )}
 
 
 
         {/* Upcoming Events */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Upcoming Events</Text>
-          <View style={styles.eventsGrid}>
-            {upcomingEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </View>
+          {upcomingEvents.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No events available</Text>
+            </View>
+          ) : (
+            <View style={styles.eventsGrid}>
+              {upcomingEvents.map((event) => (
+                <EventCard key={event.id} event={event} />
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -224,5 +278,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+  },
+  emptyContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 14,
   },
 });

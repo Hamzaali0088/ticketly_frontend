@@ -1,25 +1,26 @@
 // Zustand store for app state management
 import { create } from 'zustand';
 import { User, Event } from '@/data/mockData';
-import { mockUser, mockEvents } from '@/data/mockData';
+import { clearTokens } from '@/lib/api/client';
+import type { UserProfile } from '@/lib/api/auth';
 
 interface AppState {
-  user: User | null;
+  user: UserProfile | null;
   events: Event[];
   isAuthenticated: boolean;
-  setUser: (user: User | null) => void;
+  setUser: (user: UserProfile | null) => void;
   setEvents: (events: Event[]) => void;
   toggleEventLike: (eventId: string, userId: string) => void;
   registerForEvent: (eventId: string, userId: string) => void;
   unregisterFromEvent: (eventId: string, userId: string) => void;
   addEvent: (event: Event) => void;
-  login: (user: User) => void;
-  logout: () => void;
+  login: (user: UserProfile) => void;
+  logout: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set) => ({
   user: null,
-  events: mockEvents,
+  events: [],
   isAuthenticated: false,
   
   setUser: (user) => set({ user }),
@@ -69,6 +70,9 @@ export const useAppStore = create<AppState>((set) => ({
   
   login: (user) => set({ user, isAuthenticated: true }),
   
-  logout: () => set({ user: null, isAuthenticated: false }),
+  logout: async () => {
+    await clearTokens();
+    set({ user: null, isAuthenticated: false });
+  },
 }));
 

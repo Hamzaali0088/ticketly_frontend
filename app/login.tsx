@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,49 +9,176 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
-import { mockUser } from '@/data/mockData';
+import { authAPI } from '@/lib/api/auth';
+import { getAccessToken, getRefreshToken } from '@/lib/api/client';
 
 export default function LoginScreen() {
   const router = useRouter();
   const login = useAppStore((state) => state.login);
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [loginMethod, setLoginMethod] = useState<'google' | 'email' | null>(null);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
+  const [tempToken, setTempToken] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [otpError, setOtpError] = useState('');
+
+  // Only check auth silently on mount - don't auto-redirect
+  useEffect(() => {
+    const checkAuth = async () => {
+      const accessToken = await getAccessToken();
+      if (accessToken) {
+        // Try to get user profile to verify token is valid
+        try {
+          const response = await authAPI.getProfile();
+          if (response.success && response.user) {
+            // Silently update auth state but don't redirect
+            login(response.user);
+          }
+        } catch (error: any) {
+          // If access token is expired, try refresh token
+          if (error.response?.status === 401) {
+            const refreshToken = await getRefreshToken();
+            if (refreshToken) {
+              try {
+                const refreshResponse = await authAPI.refreshToken(refreshToken);
+                if (refreshResponse.success) {
+                  // Get profile with new token
+                  const profileResponse = await authAPI.getProfile();
+                  if (profileResponse.success && profileResponse.user) {
+                    // Silently update auth state but don't redirect
+                    login(profileResponse.user);
+                  }
+                }
+              } catch (refreshError) {
+                // Refresh failed, clear tokens - user will need to login
+                console.log('Token refresh failed');
+              }
+            }
+          }
+        }
+      }
+    };
+    checkAuth();
+  }, []);
 
   const handleGoogleLogin = () => {
-    // Dummy Google login - just log in with mock user
-    console.log('Google login pressed');
-    login(mockUser);
-    router.replace('/(tabs)');
+    // Google OAuth - redirect to backend
+    Alert.alert('Info', 'Google login will be implemented with OAuth flow');
+    // TODO: Implement Google OAuth flow
   };
 
-  const handleEmailSubmit = () => {
-    if (!email) {
-      Alert.alert('Error', 'Please enter your email');
+  const handleSignup = async () => {
+    // Clear previous error
+    setErrorMessage('');
+
+    if (!name || !email || !password) {
+      setErrorMessage('Please fill in all fields');
       return;
     }
-    // Dummy OTP send - just show OTP input
-    console.log('OTP sent to:', email);
-    setOtpSent(true);
-    Alert.alert('OTP Sent', `OTP has been sent to ${email}. Use any 6-digit code for demo.`);
+
+    if (password.length < 8) {
+      setErrorMessage('Password must be at least 8 characters');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await authAPI.signup({ name, email, password });
+      if (response.success) {
+        // Automatically switch to login mode after successful signup
+        // Clear name and password, keep email for convenience
+        setName('');
+        setPassword('');
+        setErrorMessage('');
+        setMode('login');
+        setLoginMethod('email');
+
+        Alert.alert('Success', 'Account created successfully! Please login with your email and password.');
+      } else {
+        // Show backend error message inline
+        setErrorMessage(response.message || 'Failed to create account');
+      }
+    } catch (error: any) {
+      // Extract error message from response and show inline
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to create account. Please try again.';
+      setErrorMessage(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleOTPSubmit = () => {
+  const handleEmailSubmit = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await authAPI.login({ email, password });
+      if (response.success && response.tempToken) {
+        setTempToken(response.tempToken);
+        setOtpSent(true);
+        Alert.alert('OTP Sent', `OTP has been sent to ${email}. Please check your email.`);
+      } else {
+        Alert.alert('Error', response.message || 'Failed to send OTP');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOTPSubmit = async () => {
+    // Clear previous error
+    setOtpError('');
+
     if (!otp || otp.length !== 6) {
-      Alert.alert('Error', 'Please enter a valid 6-digit OTP');
+      setOtpError('Please enter a valid 6-digit OTP');
       return;
     }
-    // Dummy OTP verification - just log in
-    console.log('OTP verified:', otp);
-    login(mockUser);
-    router.replace('/(tabs)');
+
+    if (!tempToken) {
+      setOtpError('Session expired. Please try logging in again.');
+      setOtpSent(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await authAPI.verifyOtp({ otp, tempToken });
+      if (response.success && response.user) {
+        // User is now logged in with tokens saved
+        setOtpError('');
+        login(response.user);
+        // Redirect to home page immediately after successful login
+        router.replace('/(tabs)');
+        // Note: No need to set loading to false as we're redirecting
+      } else {
+        // Show backend error message inline
+        setOtpError(response.message || 'Failed to verify OTP');
+        setLoading(false);
+      }
+    } catch (error: any) {
+      // Extract error message from response
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to verify OTP. Please try again.';
+      setOtpError(errorMsg);
+      setLoading(false);
+    }
   };
 
-  if (loginMethod === 'email' && !otpSent) {
+  // Signup Form
+  if (mode === 'signup' && loginMethod === 'email' && !otpSent) {
     return (
       <KeyboardAvoidingView
         style={styles.container}
@@ -60,7 +187,104 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
             <Text style={styles.logo}>ticketly</Text>
-            <Text style={styles.subtitle}>Enter your email to receive OTP</Text>
+            <Text style={styles.subtitle}>Create your account</Text>
+          </View>
+
+          <View style={styles.form}>
+            <Text style={styles.label}>Full Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Fatima Ali"
+              placeholderTextColor="#6B7280"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
+
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={[styles.input, errorMessage && styles.inputError]}
+              placeholder="e.g. fatimaali@gmail.com"
+              placeholderTextColor="#6B7280"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                // Clear error when user starts typing
+                if (errorMessage) setErrorMessage('');
+              }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
+            {errorMessage && (
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            )}
+
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="At least 8 characters"
+              placeholderTextColor="#6B7280"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+
+            <TouchableOpacity
+              style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+              onPress={handleSignup}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Sign Up</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.linkButton}
+              onPress={() => {
+                setMode('login');
+                setName('');
+                setEmail('');
+                setPassword('');
+                setErrorMessage('');
+              }}
+            >
+              <Text style={styles.linkText}>Already have an account? Login</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => {
+                setLoginMethod(null);
+                setName('');
+                setEmail('');
+                setPassword('');
+                setErrorMessage('');
+              }}
+            >
+              <Text style={styles.secondaryButtonText}>Back</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // Login Form
+  if (mode === 'login' && loginMethod === 'email' && !otpSent) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <Text style={styles.logo}>ticketly</Text>
+            <Text style={styles.subtitle}>Login to your account</Text>
           </View>
 
           <View style={styles.form}>
@@ -76,13 +300,47 @@ export default function LoginScreen() {
               autoComplete="email"
             />
 
-            <TouchableOpacity style={styles.primaryButton} onPress={handleEmailSubmit}>
-              <Text style={styles.primaryButtonText}>Send OTP</Text>
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your password"
+              placeholderTextColor="#6B7280"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+
+            <TouchableOpacity
+              style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+              onPress={handleEmailSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Send OTP</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.linkButton}
+              onPress={() => {
+                setMode('signup');
+                setEmail('');
+                setPassword('');
+              }}
+            >
+              <Text style={styles.linkText}>Don't have an account? Sign Up</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.secondaryButton}
-              onPress={() => setLoginMethod(null)}
+              onPress={() => {
+                setLoginMethod(null);
+                setEmail('');
+                setPassword('');
+              }}
             >
               <Text style={styles.secondaryButtonText}>Back</Text>
             </TouchableOpacity>
@@ -107,17 +365,32 @@ export default function LoginScreen() {
           <View style={styles.form}>
             <Text style={styles.label}>OTP</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, otpError && styles.inputError]}
               placeholder="Enter 6-digit OTP"
               placeholderTextColor="#6B7280"
               value={otp}
-              onChangeText={setOtp}
+              onChangeText={(text) => {
+                setOtp(text);
+                // Clear error when user starts typing
+                if (otpError) setOtpError('');
+              }}
               keyboardType="number-pad"
               maxLength={6}
             />
+            {otpError && (
+              <Text style={styles.errorText}>{otpError}</Text>
+            )}
 
-            <TouchableOpacity style={styles.primaryButton} onPress={handleOTPSubmit}>
-              <Text style={styles.primaryButtonText}>Verify OTP</Text>
+            <TouchableOpacity
+              style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+              onPress={handleOTPSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Verify OTP</Text>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -125,6 +398,7 @@ export default function LoginScreen() {
               onPress={() => {
                 setOtpSent(false);
                 setOtp('');
+                setOtpError('');
               }}
             >
               <Text style={styles.linkText}>Resend OTP</Text>
@@ -137,6 +411,10 @@ export default function LoginScreen() {
                 setOtpSent(false);
                 setOtp('');
                 setEmail('');
+                setPassword('');
+                setName('');
+                setTempToken('');
+                setOtpError('');
               }}
             >
               <Text style={styles.secondaryButtonText}>Back</Text>
@@ -155,7 +433,7 @@ export default function LoginScreen() {
           <Text style={styles.subtitle}>Login via google account to proceed.</Text>
         </View>
 
-        <View style={styles.buttonContainer}>
+        <View style={styles.buttonContainer} className='gap-4'>
           <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
             <Text style={styles.googleIcon}>G</Text>
             <Text style={styles.googleButtonText}>Sign in with Google</Text>
@@ -163,9 +441,22 @@ export default function LoginScreen() {
 
           <TouchableOpacity
             style={styles.emailButton}
-            onPress={() => setLoginMethod('email')}
+            onPress={() => {
+              setLoginMethod('email');
+              setMode('login');
+            }}
           >
-            <Text style={styles.emailButtonText}>Continue with Email + OTP</Text>
+            <Text style={styles.emailButtonText}>Login with Email</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.signupButton}
+            onPress={() => {
+              setLoginMethod('email');
+              setMode('signup');
+            }}
+          >
+            <Text style={styles.signupButtonText}>Sign Up with Email</Text>
           </TouchableOpacity>
         </View>
 
@@ -255,6 +546,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
+  signupButton: {
+    backgroundColor: '#9333EA',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  signupButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   form: {
     width: '100%',
   },
@@ -273,7 +576,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     color: '#FFFFFF',
     fontSize: 16,
-    marginBottom: 20,
+    marginBottom: 8,
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    borderWidth: 1,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    marginBottom: 12,
+    marginTop: -4,
+    paddingHorizontal: 4,
   },
   primaryButton: {
     backgroundColor: '#9333EA',
@@ -281,6 +595,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 12,
+  },
+  primaryButtonDisabled: {
+    opacity: 0.6,
   },
   primaryButtonText: {
     color: '#FFFFFF',
@@ -341,4 +658,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

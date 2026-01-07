@@ -30,8 +30,9 @@ export default function EventDetailsScreen() {
 
   useEffect(() => {
     if (event && user) {
-      setIsLiked(event.likedUsers.includes(user.id));
-      setIsRegistered(event.registeredUsers.includes(user.id));
+      const userId = (user as any)._id || user.id;
+      setIsLiked(event.likedUsers.includes(userId));
+      setIsRegistered(event.registeredUsers.includes(userId));
     }
   }, [event, user]);
 
@@ -52,21 +53,30 @@ export default function EventDetailsScreen() {
   }
 
   const handleLike = () => {
-    if (!user) {
-      Alert.alert('Login Required', 'Please login to like events');
-      router.push('/login');
+    const isAuthenticated = useAppStore.getState().isAuthenticated;
+    if (!isAuthenticated) {
+      Alert.alert('Login Required', 'Please login to like events', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => router.push('/login') },
+      ]);
       return;
     }
-    toggleEventLike(event.id, user.id);
-    setIsLiked(!isLiked);
+    if (user) {
+      toggleEventLike(event.id, user._id || user.id);
+      setIsLiked(!isLiked);
+    }
   };
 
   const handleRegister = () => {
-    if (!user) {
-      Alert.alert('Login Required', 'Please login to register for events');
-      router.push('/login');
+    const isAuthenticated = useAppStore.getState().isAuthenticated;
+    if (!isAuthenticated) {
+      Alert.alert('Login Required', 'Please login to register for events', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => router.push('/login') },
+      ]);
       return;
     }
+    if (!user) return;
 
     if (isRegistered) {
       Alert.alert('Already Registered', 'You are already registered for this event');
@@ -74,7 +84,7 @@ export default function EventDetailsScreen() {
       return;
     }
 
-    registerForEvent(event.id, user.id);
+    registerForEvent(event.id, user._id || user.id);
     setIsRegistered(true);
     setModalMessage('Successfully registered for the event!');
     setShowModal(true);

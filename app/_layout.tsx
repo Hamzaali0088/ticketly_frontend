@@ -20,9 +20,10 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="login" />
+      <Stack screenOptions={{ headerShown: false }} initialRouteName="(tabs)">
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="settings" />
         <Stack.Screen name="create-event" />
         <Stack.Screen name="event-details/[id]" />
         <Stack.Screen name="ticket/[id]" />
