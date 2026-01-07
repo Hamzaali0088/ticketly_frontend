@@ -71,8 +71,16 @@ export const useAppStore = create<AppState>((set) => ({
   login: (user) => set({ user, isAuthenticated: true }),
   
   logout: async () => {
-    await clearTokens();
-    set({ user: null, isAuthenticated: false });
+    try {
+      // Clear all tokens from storage
+      await clearTokens();
+      // Clear user state
+      set({ user: null, isAuthenticated: false, events: [] });
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if there's an error, clear the state
+      set({ user: null, isAuthenticated: false, events: [] });
+    }
   },
 }));
 

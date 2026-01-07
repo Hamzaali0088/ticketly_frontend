@@ -9,12 +9,17 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppStore } from '@/store/useAppStore';
 import { EventCard } from '@/components/EventCard';
 import { authAPI } from '@/lib/api/auth';
 import { eventsAPI } from '@/lib/api/events';
 import type { Event } from '@/lib/api/events';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+
+// Token storage keys (must match client.ts)
+const ACCESS_TOKEN_KEY = 'accessToken';
+const REFRESH_TOKEN_KEY = 'refreshToken';
 
 // Helper function to convert API event to app event format
 const convertEvent = (apiEvent: Event) => ({
@@ -54,7 +59,7 @@ export default function ProfileScreen() {
         currentUserIdRef.current = user._id;
         hasLoadedRef.current = false;
       }
-      
+
       // Load data only once per user
       if (!hasLoadedRef.current) {
         hasLoadedRef.current = true;
@@ -126,17 +131,124 @@ export default function ProfileScreen() {
   const likedEvents: any[] = []; // Will be implemented when like API is available
 
   const handleLogout = async () => {
+    console.log('🔴 Logout button clicked!');
+
+    // Show confirmation dialog
     Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Cancel',
+        style: 'cancel',
+        onPress: () => {
+          console.log('❌ Logout cancelled by user');
+        }
+      },
       {
         text: 'Logout',
         style: 'destructive',
         onPress: async () => {
-          await logout();
-          router.replace('/login');
+          await performLogout();
         },
       },
     ]);
+  };
+
+  const performLogout = async () => {
+    console.log('✅ Logout confirmed, starting logout process...');
+    try {
+      console.log('Step 1: Checking tokens before removal...');
+      const accessTokenBefore = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+      const refreshTokenBefore = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+      console.log('Access token exists:', !!accessTokenBefore, accessTokenBefore ? 'Length: ' + accessTokenBefore.length : 'null');
+      console.log('Refresh token exists:', !!refreshTokenBefore, refreshTokenBefore ? 'Length: ' + refreshTokenBefore.length : 'null');
+
+      // For web, also clear localStorage directly
+      if (typeof window !== 'undefined' && window.localStorage) {
+        console.log('Step 1.5: Clearing localStorage directly (web fallback)...');
+        window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+        window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+        console.log('✅ localStorage cleared directly');
+      }
+
+      console.log('Step 2: Removing tokens individually from AsyncStorage...');
+      // Step 1: Clear tokens directly using the exact keys
+      await Promise.all([
+        AsyncStorage.removeItem(ACCESS_TOKEN_KEY),
+        AsyncStorage.removeItem(REFRESH_TOKEN_KEY),
+      ]);
+      console.log('✅ Tokens removed individually from AsyncStorage');
+
+      console.log('Step 3: Clearing all AsyncStorage...');
+      // Step 2: Clear all AsyncStorage to ensure nothing remains
+      await AsyncStorage.clear();
+      console.log('✅ All AsyncStorage cleared');
+
+      // Clear localStorage again after AsyncStorage.clear()
+      if (typeof window !== 'undefined' && window.localStorage) {
+        console.log('Step 3.5: Clearing localStorage again...');
+        window.localStorage.clear();
+        console.log('✅ localStorage cleared completely');
+      }
+
+      console.log('Step 4: Clearing user state in store...');
+      // Step 3: Clear user state in store
+      await logout();
+      console.log('✅ User state cleared');
+
+      console.log('Step 5: Waiting for storage operations to complete...');
+      // Step 4: Small delay to ensure storage operations complete
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      console.log('Step 6: Verifying tokens are actually cleared...');
+      // Step 5: Verify tokens are actually cleared
+      const remainingAccessToken = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+      const remainingRefreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+
+      // Also check localStorage
+      let localStorageAccessToken = null;
+      let localStorageRefreshToken = null;
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorageAccessToken = window.localStorage.getItem(ACCESS_TOKEN_KEY);
+        localStorageRefreshToken = window.localStorage.getItem(REFRESH_TOKEN_KEY);
+      }
+
+      console.log('AsyncStorage - Access token still exists:', !!remainingAccessToken);
+      console.log('AsyncStorage - Refresh token still exists:', !!remainingRefreshToken);
+      console.log('localStorage - Access token still exists:', !!localStorageAccessToken);
+      console.log('localStorage - Refresh token still exists:', !!localStorageRefreshToken);
+
+      if (remainingAccessToken || remainingRefreshToken || localStorageAccessToken || localStorageRefreshToken) {
+        // If tokens still exist, clear again
+        console.warn('⚠️ Tokens still exist, clearing again...');
+        await AsyncStorage.clear();
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.clear();
+        }
+        console.log('✅ Storage cleared again');
+      }
+
+      console.log('Step 7: Redirecting to home page...');
+      // Step 6: Redirect to home page
+      router.replace('/(tabs)');
+      console.log('✅ Logout complete!');
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      // Force clear everything even if there's an error
+      try {
+        console.log('Attempting to clear storage after error...');
+        await AsyncStorage.clear();
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.clear();
+        }
+        console.log('✅ Storage cleared after error');
+      } catch (clearError) {
+        console.error('❌ Error clearing storage:', clearError);
+      }
+      // Clear state even if storage clear fails
+      console.log('Clearing user state after error...');
+      await logout();
+      console.log('Redirecting to home page after error...');
+      router.replace('/(tabs)');
+    }
   };
 
   const renderEvents = () => {
@@ -253,7 +365,14 @@ export default function ProfileScreen() {
 
         {/* Logout */}
         <View className="px-5">
-          <TouchableOpacity className="bg-[#EF4444] py-4 rounded-xl items-center mt-2" onPress={handleLogout}>
+          <TouchableOpacity
+            className="bg-[#EF4444] py-4 rounded-xl items-center mt-2"
+            onPress={() => {
+              console.log('🔴🔴🔴 Logout TouchableOpacity onPress triggered!');
+              handleLogout();
+            }}
+            activeOpacity={0.7}
+          >
             <Text className="text-white text-base font-semibold">Logout</Text>
           </TouchableOpacity>
         </View>

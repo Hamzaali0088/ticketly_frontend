@@ -34,7 +34,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
 
-  // Only check auth silently on mount - don't auto-redirect
+  // Silently check auth on mount - if already authenticated, redirect to home
   useEffect(() => {
     const checkAuth = async () => {
       const accessToken = await getAccessToken();
@@ -43,8 +43,10 @@ export default function LoginScreen() {
         try {
           const response = await authAPI.getProfile();
           if (response.success && response.user) {
-            // Silently update auth state but don't redirect
+            // User is authenticated, login and redirect to tabs
             login(response.user);
+            router.replace('/(tabs)');
+            return;
           }
         } catch (error: any) {
           // If access token is expired, try refresh token
@@ -57,12 +59,14 @@ export default function LoginScreen() {
                   // Get profile with new token
                   const profileResponse = await authAPI.getProfile();
                   if (profileResponse.success && profileResponse.user) {
-                    // Silently update auth state but don't redirect
+                    // User is authenticated, login and redirect to tabs
                     login(profileResponse.user);
+                    router.replace('/(tabs)');
+                    return;
                   }
                 }
               } catch (refreshError) {
-                // Refresh failed, clear tokens - user will need to login
+                // Refresh failed - user can stay on login page
                 console.log('Token refresh failed');
               }
             }
@@ -71,7 +75,7 @@ export default function LoginScreen() {
       }
     };
     checkAuth();
-  }, []);
+  }, [login, router]);
 
   const handleGoogleLogin = () => {
     // Google OAuth - redirect to backend

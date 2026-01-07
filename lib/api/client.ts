@@ -127,7 +127,51 @@ export const setTokens = async (accessToken: string, refreshToken: string) => {
 };
 
 export const clearTokens = async () => {
-  await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY]);
+  try {
+    // Remove tokens individually to ensure they're cleared
+    await Promise.all([
+      AsyncStorage.removeItem(ACCESS_TOKEN_KEY),
+      AsyncStorage.removeItem(REFRESH_TOKEN_KEY),
+    ]);
+    
+    // Also try multiRemove as backup
+    await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY]).catch(() => {
+      // Ignore error if items don't exist
+    });
+    
+    // Verify tokens are removed
+    const [accessToken, refreshToken] = await Promise.all([
+      AsyncStorage.getItem(ACCESS_TOKEN_KEY),
+      AsyncStorage.getItem(REFRESH_TOKEN_KEY),
+    ]);
+    
+    // If tokens still exist, force remove them
+    if (accessToken) {
+      await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
+    }
+    if (refreshToken) {
+      await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
+    }
+    
+    // Final check - if still present, clear all storage
+    const [finalAccessToken, finalRefreshToken] = await Promise.all([
+      AsyncStorage.getItem(ACCESS_TOKEN_KEY),
+      AsyncStorage.getItem(REFRESH_TOKEN_KEY),
+    ]);
+    
+    if (finalAccessToken || finalRefreshToken) {
+      console.warn('Tokens still exist, clearing all storage');
+      await AsyncStorage.clear();
+    }
+  } catch (error) {
+    console.error('Error clearing tokens:', error);
+    // Force clear all storage on any error
+    try {
+      await AsyncStorage.clear();
+    } catch (clearError) {
+      console.error('Error clearing all storage:', clearError);
+    }
+  }
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
