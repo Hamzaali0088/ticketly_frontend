@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
 import { authAPI } from '@/lib/api/auth';
 import { getAccessToken, getRefreshToken } from '@/lib/api/client';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -30,6 +31,9 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [otpError, setOtpError] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
 
   // Only check auth silently on mount - don't auto-redirect
   useEffect(() => {
@@ -117,8 +121,17 @@ export default function LoginScreen() {
   };
 
   const handleEmailSubmit = async () => {
+    // Clear previous error
+    setLoginError('');
+
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+      setLoginError('Please enter both email and password');
+      return;
+    }
+
+    // Validate password length
+    if (password.length < 8) {
+      setLoginError('Password must be at least 8 characters');
       return;
     }
 
@@ -126,14 +139,18 @@ export default function LoginScreen() {
     try {
       const response = await authAPI.login({ email, password });
       if (response.success && response.tempToken) {
+        setLoginError('');
         setTempToken(response.tempToken);
         setOtpSent(true);
         Alert.alert('OTP Sent', `OTP has been sent to ${email}. Please check your email.`);
       } else {
-        Alert.alert('Error', response.message || 'Failed to send OTP');
+        // Show backend error message inline
+        setLoginError(response.message || 'Failed to send OTP');
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to send OTP. Please try again.');
+      // Extract error message from response
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to send OTP. Please try again.';
+      setLoginError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -221,15 +238,27 @@ export default function LoginScreen() {
             )}
 
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="At least 8 characters"
-              placeholderTextColor="#6B7280"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="At least 8 characters"
+                placeholderTextColor="#6B7280"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showSignupPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowSignupPassword(!showSignupPassword)}
+              >
+                <MaterialIcons
+                  name={showSignupPassword ? "visibility" : "visibility-off"}
+                  size={20}
+                  color="#9CA3AF"
+                />
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
               style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
@@ -290,26 +319,49 @@ export default function LoginScreen() {
           <View style={styles.form}>
             <Text style={styles.label}>Email</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, loginError && styles.inputError]}
               placeholder="e.g. fatimaali@gmail.com"
               placeholderTextColor="#6B7280"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                // Clear error when user starts typing
+                if (loginError) setLoginError('');
+              }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
             />
 
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your password"
-              placeholderTextColor="#6B7280"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[styles.passwordInput, loginError && styles.inputError]}
+                placeholder="Enter your password"
+                placeholderTextColor="#6B7280"
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  // Clear error when user starts typing
+                  if (loginError) setLoginError('');
+                }}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <MaterialIcons
+                  name={showPassword ? "visibility" : "visibility-off"}
+                  size={20}
+                  color="#9CA3AF"
+                />
+              </TouchableOpacity>
+            </View>
+            {loginError && (
+              <Text style={styles.errorText}>{loginError}</Text>
+            )}
 
             <TouchableOpacity
               style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
@@ -329,6 +381,7 @@ export default function LoginScreen() {
                 setMode('signup');
                 setEmail('');
                 setPassword('');
+                setLoginError('');
               }}
             >
               <Text style={styles.linkText}>Don't have an account? Sign Up</Text>
@@ -340,6 +393,7 @@ export default function LoginScreen() {
                 setLoginMethod(null);
                 setEmail('');
                 setPassword('');
+                setLoginError('');
               }}
             >
               <Text style={styles.secondaryButtonText}>Back</Text>
@@ -577,6 +631,27 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     marginBottom: 8,
+  },
+  passwordContainer: {
+    position: 'relative',
+    marginBottom: 8,
+  },
+  passwordInput: {
+    backgroundColor: '#1F1F1F',
+    borderWidth: 1,
+    borderColor: '#374151',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingRight: 50,
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 16,
+    top: 14,
+    padding: 4,
   },
   inputError: {
     borderColor: '#EF4444',

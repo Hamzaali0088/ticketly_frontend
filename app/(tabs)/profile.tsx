@@ -97,22 +97,22 @@ export default function ProfileScreen() {
   // Show login option if user is not authenticated
   if (!user) {
     return (
-      <View style={styles.container}>
+      <View className="flex-1 bg-[#0F0F0F] pt-[60px]">
         <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyTitle}>Welcome to Ticketly</Text>
-            <Text style={styles.emptyText}>
+          <View className="flex-1 items-center justify-center px-10 pt-[100px]">
+            <Text className="text-white text-2xl font-bold mb-4 text-center">Welcome to Ticketly</Text>
+            <Text className="text-[#9CA3AF] text-base mb-8 text-center leading-6">
               Login to create events, register for events, and manage your profile
             </Text>
             <TouchableOpacity
-              style={styles.loginButton}
+              className="bg-[#9333EA] py-4 px-8 rounded-xl"
               onPress={() => router.push('/login')}
             >
-              <Text style={styles.loginButtonText}>Login / Sign Up</Text>
+              <Text className="text-white text-base font-semibold">Login / Sign Up</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -140,14 +140,14 @@ export default function ProfileScreen() {
   };
 
   const renderEvents = () => {
-    let eventsToShow: typeof events = [];
+    let eventsToShow: any[] = [];
     if (activeTab === 'created') eventsToShow = createdEvents;
     else if (activeTab === 'joined') eventsToShow = joinedEvents;
     else eventsToShow = likedEvents;
 
     if (loading) {
       return (
-        <View style={styles.emptyEventsContainer}>
+        <View className="py-10 items-center">
           <ActivityIndicator size="large" color="#9333EA" />
         </View>
       );
@@ -155,8 +155,8 @@ export default function ProfileScreen() {
 
     if (eventsToShow.length === 0) {
       return (
-        <View style={styles.emptyEventsContainer}>
-          <Text style={styles.emptyEventsText}>
+        <View className="py-10 items-center">
+          <Text className="text-[#6B7280] text-sm">
             {activeTab === 'created' && 'No events created yet'}
             {activeTab === 'joined' && 'No events joined yet'}
             {activeTab === 'liked' && 'No events liked yet'}
@@ -166,7 +166,7 @@ export default function ProfileScreen() {
     }
 
     return (
-      <View style={styles.eventsGrid}>
+      <View className="flex-row flex-wrap justify-between">
         {eventsToShow.map((event) => (
           <EventCard key={event.id} event={event} />
         ))}
@@ -175,16 +175,16 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-[#0F0F0F] pt-[60px]">
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Header */}
-        <View style={styles.header}>
+        <View className="flex-row justify-end items-center px-5 pt-5 pb-2">
           <TouchableOpacity
-            style={styles.menuButton}
+            className="bg-[#1F1F1F] w-10 h-10 rounded-lg items-center justify-center"
             onPress={() => router.push('/settings')}
           >
             <MaterialIcons name="menu" size={24} color="#FFFFFF" />
@@ -192,84 +192,69 @@ export default function ProfileScreen() {
         </View>
 
         {/* Profile Section - Centered */}
-        <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>
+        <View className="items-center py-6 pb-8">
+          <View className="w-[100px] h-[100px] rounded-full bg-[#9333EA] items-center justify-center mb-4">
+            <Text className="text-white text-4xl font-bold">
               {user.fullName.charAt(0).toUpperCase()}
             </Text>
           </View>
-          <Text style={styles.name}>{user.fullName}</Text>
+          <Text className="text-white text-2xl font-bold mb-1">{user.fullName}</Text>
           {user.companyName && (
-            <Text style={styles.company}>{user.companyName}</Text>
+            <Text className="text-[#9333EA] text-base font-semibold mt-1">{user.companyName}</Text>
           )}
         </View>
 
         {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{createdEvents.length}</Text>
-            <Text style={styles.statLabel}>Created</Text>
+        <View className="flex-row justify-around px-5 pb-6">
+          <View className="items-center">
+            <Text className="text-white text-2xl font-bold mb-1">{createdEvents.length}</Text>
+            <Text className="text-[#9CA3AF] text-xs">Created</Text>
           </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{joinedEvents.length}</Text>
-            <Text style={styles.statLabel}>Joined</Text>
+          <View className="items-center">
+            <Text className="text-white text-2xl font-bold mb-1">{joinedEvents.length}</Text>
+            <Text className="text-[#9CA3AF] text-xs">Joined</Text>
           </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{likedEvents.length}</Text>
-            <Text style={styles.statLabel}>Liked</Text>
+          <View className="items-center">
+            <Text className="text-white text-2xl font-bold mb-1">{likedEvents.length}</Text>
+            <Text className="text-[#9CA3AF] text-xs">Liked</Text>
           </View>
         </View>
 
         {/* Tabs */}
-        <View style={styles.tabsContainer}>
+        <View className="flex-row px-5 mb-5 gap-2">
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'created' && styles.tabActive]}
+            className={`flex-1 py-2.5 items-center rounded-lg ${activeTab === 'created' ? 'bg-[#9333EA]' : 'bg-[#1F1F1F]'}`}
             onPress={() => setActiveTab('created')}
           >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === 'created' && styles.tabTextActive,
-              ]}
-            >
+            <Text className={`text-xs font-semibold ${activeTab === 'created' ? 'text-white' : 'text-[#9CA3AF]'}`}>
               Created Events
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'joined' && styles.tabActive]}
+            className={`flex-1 py-2.5 items-center rounded-lg ${activeTab === 'joined' ? 'bg-[#9333EA]' : 'bg-[#1F1F1F]'}`}
             onPress={() => setActiveTab('joined')}
           >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === 'joined' && styles.tabTextActive,
-              ]}
-            >
+            <Text className={`text-xs font-semibold ${activeTab === 'joined' ? 'text-white' : 'text-[#9CA3AF]'}`}>
               Joined Events
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'liked' && styles.tabActive]}
+            className={`flex-1 py-2.5 items-center rounded-lg ${activeTab === 'liked' ? 'bg-[#9333EA]' : 'bg-[#1F1F1F]'}`}
             onPress={() => setActiveTab('liked')}
           >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === 'liked' && styles.tabTextActive,
-              ]}
-            >
+            <Text className={`text-xs font-semibold ${activeTab === 'liked' ? 'text-white' : 'text-[#9CA3AF]'}`}>
               Liked Events
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Events List */}
-        <View style={styles.eventsSection}>{renderEvents()}</View>
+        <View className="px-5 mb-8">{renderEvents()}</View>
 
         {/* Logout */}
-        <View style={styles.settingsSection}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutText}>Logout</Text>
+        <View className="px-5">
+          <TouchableOpacity className="bg-[#EF4444] py-4 rounded-xl items-center mt-2" onPress={handleLogout}>
+            <Text className="text-white text-base font-semibold">Logout</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -277,189 +262,4 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F0F0F',
-    paddingTop: 60,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 8,
-  },
-  profileSection: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    paddingBottom: 32,
-  },
-  avatarContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#9333EA',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 40,
-    fontWeight: '700',
-  },
-  name: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  company: {
-    color: '#9333EA',
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  menuButton: {
-    backgroundColor: '#1F1F1F',
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statNumber: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  statLabel: {
-    color: '#9CA3AF',
-    fontSize: 12,
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    gap: 8,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 8,
-    backgroundColor: '#1F1F1F',
-  },
-  tabActive: {
-    backgroundColor: '#9333EA',
-  },
-  tabText: {
-    color: '#9CA3AF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  tabTextActive: {
-    color: '#FFFFFF',
-  },
-  eventsSection: {
-    paddingHorizontal: 20,
-    marginBottom: 32,
-  },
-  eventsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  emptyEventsContainer: {
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-  emptyEventsText: {
-    color: '#6B7280',
-    fontSize: 14,
-  },
-  settingsSection: {
-    paddingHorizontal: 20,
-  },
-  settingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#1F1F1F',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  settingText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  settingArrow: {
-    color: '#9CA3AF',
-    fontSize: 20,
-  },
-  logoutButton: {
-    backgroundColor: '#EF4444',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  logoutText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-    paddingTop: 100,
-  },
-  emptyTitle: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  emptyText: {
-    color: '#9CA3AF',
-    fontSize: 16,
-    marginBottom: 32,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  loginButton: {
-    backgroundColor: '#9333EA',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-  },
-  loginButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
 

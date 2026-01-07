@@ -36,6 +36,9 @@ export default function SettingsScreen() {
   const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleUpdateName = async () => {
     if (!name.trim()) {
@@ -254,43 +257,79 @@ export default function SettingsScreen() {
 
             <Text style={styles.sectionTitle}>Change Password</Text>
             <Text style={styles.label}>Current Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter current password"
-              placeholderTextColor="#6B7280"
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter current password"
+                placeholderTextColor="#6B7280"
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                secureTextEntry={!showCurrentPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+              >
+                <MaterialIcons
+                  name={showCurrentPassword ? "visibility" : "visibility-off"}
+                  size={20}
+                  color="#9CA3AF"
+                />
+              </TouchableOpacity>
+            </View>
 
             <Text style={styles.label}>New Password</Text>
-            <TextInput
-              style={[styles.input, passwordError && styles.inputError]}
-              placeholder="Enter new password (min 8 characters)"
-              placeholderTextColor="#6B7280"
-              value={newPassword}
-              onChangeText={(text) => {
-                setNewPassword(text);
-                if (passwordError) setPasswordError('');
-              }}
-              secureTextEntry
-              autoCapitalize="none"
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[styles.passwordInput, passwordError && styles.inputError]}
+                placeholder="Enter new password (min 8 characters)"
+                placeholderTextColor="#6B7280"
+                value={newPassword}
+                onChangeText={(text) => {
+                  setNewPassword(text);
+                  if (passwordError) setPasswordError('');
+                }}
+                secureTextEntry={!showNewPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowNewPassword(!showNewPassword)}
+              >
+                <MaterialIcons
+                  name={showNewPassword ? "visibility" : "visibility-off"}
+                  size={20}
+                  color="#9CA3AF"
+                />
+              </TouchableOpacity>
+            </View>
 
             <Text style={styles.label}>Confirm New Password</Text>
-            <TextInput
-              style={[styles.input, passwordError && styles.inputError]}
-              placeholder="Confirm new password"
-              placeholderTextColor="#6B7280"
-              value={confirmPassword}
-              onChangeText={(text) => {
-                setConfirmPassword(text);
-                if (passwordError) setPasswordError('');
-              }}
-              secureTextEntry
-              autoCapitalize="none"
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[styles.passwordInput, passwordError && styles.inputError]}
+                placeholder="Confirm new password"
+                placeholderTextColor="#6B7280"
+                value={confirmPassword}
+                onChangeText={(text) => {
+                  setConfirmPassword(text);
+                  if (passwordError) setPasswordError('');
+                }}
+                secureTextEntry={!showConfirmPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                <MaterialIcons
+                  name={showConfirmPassword ? "visibility" : "visibility-off"}
+                  size={20}
+                  color="#9CA3AF"
+                />
+              </TouchableOpacity>
+            </View>
             {passwordError && (
               <Text style={styles.errorText}>{passwordError}</Text>
             )}
@@ -386,6 +425,27 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     marginBottom: 20,
+  },
+  passwordContainer: {
+    position: 'relative',
+    marginBottom: 20,
+  },
+  passwordInput: {
+    backgroundColor: '#1F1F1F',
+    borderWidth: 1,
+    borderColor: '#374151',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingRight: 50,
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 16,
+    top: 14,
+    padding: 4,
   },
   inputError: {
     borderColor: '#EF4444',
