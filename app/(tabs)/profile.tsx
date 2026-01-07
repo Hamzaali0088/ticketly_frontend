@@ -1,21 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAppStore } from '@/store/useAppStore';
 import { EventCard } from '@/components/EventCard';
 import { authAPI } from '@/lib/api/auth';
-import { eventsAPI } from '@/lib/api/events';
 import type { Event } from '@/lib/api/events';
+import { eventsAPI } from '@/lib/api/events';
+import { useAppStore } from '@/store/useAppStore';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 // Token storage keys (must match client.ts)
 const ACCESS_TOKEN_KEY = 'accessToken';
@@ -109,7 +108,7 @@ export default function ProfileScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View className="flex-1 items-center justify-center px-10 pt-[100px]">
-            <Text className="text-white text-2xl font-bold mb-4 text-center">Welcome to Ticketly</Text>
+            <Text className="text-white text-2xl font-bold mb-4 text-center">Welcome on Ticketly</Text>
             <Text className="text-[#9CA3AF] text-base mb-8 text-center leading-6">
               Login to create events, register for events, and manage your profile
             </Text>
