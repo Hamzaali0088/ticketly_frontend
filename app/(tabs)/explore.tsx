@@ -5,7 +5,6 @@ import { useRouter } from 'expo-router';
 import React, { useMemo, useState, useEffect } from 'react';
 import {
   FlatList,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -75,18 +74,18 @@ export default function ExploreScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View className="flex-1 bg-[#0F0F0F] pt-[60px] justify-center items-center">
         <ActivityIndicator size="large" color="#9333EA" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Explore Events</Text>
+    <View className="flex-1 bg-[#0F0F0F] pt-[60px]">
+      <View className="px-5 pb-5">
+        <Text className="text-3xl font-bold text-white mb-4">Explore Events</Text>
         <TextInput
-          style={styles.searchInput}
+          className="bg-[#1F1F1F] rounded-xl py-3 px-4 text-white text-sm"
           placeholder="Search by event..."
           placeholderTextColor="#6B7280"
           value={searchQuery}
@@ -99,57 +98,14 @@ export default function ExploreScreen() {
         renderItem={({ item }) => <EventCard event={item} />}
         keyExtractor={(item) => item.id}
         numColumns={2}
-        contentContainerStyle={styles.listContent}
-        columnWrapperStyle={styles.row}
+        contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+        columnWrapperStyle={{ justifyContent: 'space-between' }}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No events found</Text>
+          <View className="flex-1 items-center justify-center py-15">
+            <Text className="text-[#6B7280] text-base">No events found</Text>
           </View>
         }
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F0F0F',
-    paddingTop: 60,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  searchInput: {
-    backgroundColor: '#1F1F1F',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    color: '#FFFFFF',
-    fontSize: 14,
-  },
-  listContent: {
-    padding: 20,
-    paddingBottom: 100,
-  },
-  row: {
-    justifyContent: 'space-between',
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    color: '#6B7280',
-    fontSize: 16,
-  },
-});

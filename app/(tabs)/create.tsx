@@ -1,68 +1,27 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function CreateTabScreen() {
     const router = useRouter();
 
     return (
-        <View style={styles.container}>
-            <View style={styles.content}>
+        <View className="flex-1 bg-[#0F0F0F] pt-[60px]">
+            <View className="flex-1 items-center justify-center px-10">
                 <MaterialIcons name="add-circle-outline" size={64} color="#9333EA" />
-                <Text style={styles.title}>Create Event</Text>
-                <Text style={styles.subtitle}>
+                <Text className="text-3xl font-bold text-white mb-3 text-center">Create Event</Text>
+                <Text className="text-base text-[#9CA3AF] text-center mb-8">
                     Start creating amazing events and reach your audience
                 </Text>
                 <TouchableOpacity
-                    style={styles.button}
+                    className="bg-[#9333EA] py-4 px-8 rounded-xl"
                     onPress={() => router.push('/create-event')}
                 >
-                    <Text style={styles.buttonText}>Get Started</Text>
+                    <Text className="text-white text-base font-semibold">Get Started</Text>
                 </TouchableOpacity>
             </View>
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#0F0F0F',
-        paddingTop: 60,
-    },
-    content: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 40,
-    },
-    icon: {
-        marginBottom: 24,
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: '700',
-        color: '#FFFFFF',
-        marginBottom: 12,
-        textAlign: 'center',
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#9CA3AF',
-        textAlign: 'center',
-        marginBottom: 32,
-    },
-    button: {
-        backgroundColor: '#9333EA',
-        paddingVertical: 16,
-        paddingHorizontal: 32,
-        borderRadius: 12,
-    },
-    buttonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-});
 

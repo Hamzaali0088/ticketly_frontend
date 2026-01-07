@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -122,35 +121,35 @@ export default function CreateEventScreen() {
   if (step === 1) {
     return (
       <KeyboardAvoidingView
-        style={styles.container}
+        className="flex-1 bg-[#0F0F0F]"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
+          <View className="flex-row items-center justify-between pt-[60px] px-5 pb-5">
             <TouchableOpacity onPress={() => router.back()}>
               <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Create Event</Text>
+            <Text className="text-white text-xl font-bold">Create Event</Text>
             <View style={{ width: 30 }} />
           </View>
 
-          <View style={styles.form}>
-            <Text style={styles.label}>Name</Text>
+          <View className="px-5">
+            <Text className="text-white text-sm font-semibold mb-2 mt-4">Name</Text>
             <TextInput
-              style={styles.input}
+              className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base"
               placeholder="e.g. Fatima Ali"
               placeholderTextColor="#6B7280"
               value={formData.name}
               onChangeText={(value) => handleInputChange('name', value)}
             />
 
-            <Text style={styles.label}>Email</Text>
+            <Text className="text-white text-sm font-semibold mb-2 mt-4">Email</Text>
             <TextInput
-              style={styles.input}
+              className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base"
               placeholder="e.g. fatimaali@gmail.com"
               placeholderTextColor="#6B7280"
               value={formData.email}
@@ -159,14 +158,14 @@ export default function CreateEventScreen() {
               autoCapitalize="none"
             />
 
-            <Text style={styles.label}>Phone Number</Text>
-            <View style={styles.phoneContainer}>
-              <TouchableOpacity style={styles.countryCode}>
-                <Text style={styles.countryCodeText}>PK</Text>
+            <Text className="text-white text-sm font-semibold mb-2 mt-4">Phone Number</Text>
+            <View className="flex-row gap-2">
+              <TouchableOpacity className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-3 flex-row items-center gap-2">
+                <Text className="text-white text-base font-semibold">PK</Text>
                 <MaterialIcons name="expand-more" size={16} color="#9CA3AF" />
               </TouchableOpacity>
               <TextInput
-                style={[styles.input, styles.phoneInput]}
+                className="flex-1 bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base"
                 placeholder="+92 334495437"
                 placeholderTextColor="#6B7280"
                 value={formData.phone}
@@ -175,39 +174,39 @@ export default function CreateEventScreen() {
               />
             </View>
 
-            <Text style={styles.label}>Company Name</Text>
+            <Text className="text-white text-sm font-semibold mb-2 mt-4">Company Name</Text>
             <TextInput
-              style={styles.input}
+              className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base"
               placeholder="e.g. Paymo events"
               placeholderTextColor="#6B7280"
               value={formData.companyName}
               onChangeText={(value) => handleInputChange('companyName', value)}
             />
 
-            <Text style={styles.label}>Event Name</Text>
+            <Text className="text-white text-sm font-semibold mb-2 mt-4">Event Name</Text>
             <TextInput
-              style={styles.input}
+              className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base"
               placeholder="e.g. Catcha cat"
               placeholderTextColor="#6B7280"
               value={formData.eventName}
               onChangeText={(value) => handleInputChange('eventName', value)}
             />
 
-            <Text style={styles.label}>Event Location</Text>
+            <Text className="text-white text-sm font-semibold mb-2 mt-4">Event Location</Text>
             <TextInput
-              style={styles.input}
+              className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base"
               placeholder="e.g LUMS"
               placeholderTextColor="#6B7280"
               value={formData.eventLocation}
               onChangeText={(value) => handleInputChange('eventLocation', value)}
             />
 
-            <Text style={styles.label}>Event Date</Text>
+            <Text className="text-white text-sm font-semibold mb-2 mt-4">Event Date</Text>
             <TouchableOpacity
-              style={styles.datePickerButton}
+              className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 flex-row justify-between items-center"
               onPress={() => setShowDatePicker(true)}
             >
-              <Text style={[styles.datePickerText, !formData.eventDate && styles.placeholder]}>
+              <Text className={`text-base ${formData.eventDate ? 'text-white' : 'text-[#6B7280]'}`}>
                 {formData.eventDate
                   ? formData.eventDate.toLocaleDateString('en-US', {
                     month: 'long',
@@ -234,17 +233,17 @@ export default function CreateEventScreen() {
               />
             )}
 
-            <Text style={styles.label}>Event City</Text>
+            <Text className="text-white text-sm font-semibold mb-2 mt-4">Event City</Text>
             <TextInput
-              style={styles.input}
+              className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base"
               placeholder="Enter city name"
               placeholderTextColor="#6B7280"
               value={formData.eventCity}
               onChangeText={(value) => handleInputChange('eventCity', value)}
             />
 
-            <TouchableOpacity style={styles.nextButton} onPress={handleStep1Next}>
-              <Text style={styles.nextButtonText}>Next</Text>
+            <TouchableOpacity className="bg-[#9333EA] py-4 rounded-xl items-center mt-8" onPress={handleStep1Next}>
+              <Text className="text-white text-base font-semibold">Next</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -254,29 +253,29 @@ export default function CreateEventScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      className="flex-1 bg-[#0F0F0F]"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
+        <View className="flex-row items-center justify-between pt-[60px] px-5 pb-5">
           <TouchableOpacity onPress={handleStep2Back}>
             <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Create Event</Text>
+          <Text className="text-white text-xl font-bold">Create Event</Text>
           <View style={{ width: 30 }} />
         </View>
 
-        <View style={styles.form}>
-          <Text style={styles.label}>Event Date</Text>
+        <View className="px-5">
+          <Text className="text-white text-sm font-semibold mb-2 mt-4">Event Date</Text>
           <TouchableOpacity
-            style={styles.datePickerButton}
+            className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 flex-row justify-between items-center"
             onPress={() => setShowDatePicker(true)}
           >
-            <Text style={[styles.datePickerText, !formData.eventDate && styles.placeholder]}>
+            <Text className={`text-base ${formData.eventDate ? 'text-white' : 'text-[#6B7280]'}`}>
               {formData.eventDate
                 ? formData.eventDate.toLocaleDateString('en-US', {
                   month: 'long',
@@ -303,17 +302,17 @@ export default function CreateEventScreen() {
             />
           )}
 
-          <Text style={styles.label}>Event City</Text>
-          <TouchableOpacity style={styles.dropdownButton}>
-            <Text style={[styles.dropdownText, !formData.eventCity && styles.placeholder]}>
+          <Text className="text-white text-sm font-semibold mb-2 mt-4">Event City</Text>
+          <TouchableOpacity className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 flex-row justify-between items-center">
+            <Text className={`text-base ${formData.eventCity ? 'text-white' : 'text-[#6B7280]'}`}>
               {formData.eventCity || 'Select City'}
             </Text>
             <MaterialIcons name="expand-more" size={16} color="#9CA3AF" />
           </TouchableOpacity>
 
-          <Text style={styles.label}>Event Category</Text>
+          <Text className="text-white text-sm font-semibold mb-2 mt-4">Event Category</Text>
           <TouchableOpacity
-            style={styles.dropdownButton}
+            className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 flex-row justify-between items-center"
             onPress={() => {
               Alert.alert(
                 'Select Category',
@@ -325,15 +324,15 @@ export default function CreateEventScreen() {
               );
             }}
           >
-            <Text style={[styles.dropdownText, !formData.eventCategory && styles.placeholder]}>
+            <Text className={`text-base ${formData.eventCategory ? 'text-white' : 'text-[#6B7280]'}`}>
               {formData.eventCategory || 'Select Category'}
             </Text>
             <MaterialIcons name="expand-more" size={16} color="#9CA3AF" />
           </TouchableOpacity>
 
-          <Text style={styles.label}>What is your event about</Text>
+          <Text className="text-white text-sm font-semibold mb-2 mt-4">What is your event about</Text>
           <TextInput
-            style={[styles.input, styles.textArea]}
+            className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base min-h-[120px] pt-3.5"
             placeholder="Enter a description..."
             placeholderTextColor="#6B7280"
             value={formData.description}
@@ -344,14 +343,14 @@ export default function CreateEventScreen() {
           />
 
           <TouchableOpacity
-            style={[styles.createButton, loading && styles.createButtonDisabled]}
+            className={`bg-[#9333EA] py-4 rounded-xl items-center mt-8 ${loading ? 'opacity-60' : ''}`}
             onPress={handleSubmit}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.createButtonText}>Create Event</Text>
+              <Text className="text-white text-base font-semibold">Create Event</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -368,137 +367,4 @@ export default function CreateEventScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F0F0F',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  form: {
-    paddingHorizontal: 20,
-  },
-  label: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    marginTop: 16,
-  },
-  input: {
-    backgroundColor: '#1F1F1F',
-    borderWidth: 1,
-    borderColor: '#374151',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  textArea: {
-    minHeight: 120,
-    paddingTop: 14,
-  },
-  phoneContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  countryCode: {
-    backgroundColor: '#1F1F1F',
-    borderWidth: 1,
-    borderColor: '#374151',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  countryCodeText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  phoneInput: {
-    flex: 1,
-  },
-  datePickerButton: {
-    backgroundColor: '#1F1F1F',
-    borderWidth: 1,
-    borderColor: '#374151',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  datePickerText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  dropdownButton: {
-    backgroundColor: '#1F1F1F',
-    borderWidth: 1,
-    borderColor: '#374151',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dropdownText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  placeholder: {
-    color: '#6B7280',
-  },
-  nextButton: {
-    backgroundColor: '#9333EA',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 32,
-  },
-  nextButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  createButton: {
-    backgroundColor: '#9333EA',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 32,
-  },
-  createButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  createButtonDisabled: {
-    opacity: 0.6,
-  },
-});
 

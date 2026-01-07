@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -148,38 +147,38 @@ export default function SettingsScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      className="flex-1 bg-[#0F0F0F]"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View className="flex-row items-center justify-between pt-[60px] px-5 pb-5">
           <TouchableOpacity onPress={() => router.back()}>
             <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Settings</Text>
+          <Text className="text-white text-xl font-bold">Settings</Text>
           <View style={{ width: 24 }} />
         </View>
 
         {/* Tabs */}
-        <View style={styles.tabsContainer}>
+        <View className="flex-row px-5 mb-6 gap-2">
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'profile' && styles.tabActive]}
+            className={`flex-1 py-3 items-center rounded-lg ${activeTab === 'profile' ? 'bg-[#9333EA]' : 'bg-[#1F1F1F]'}`}
             onPress={() => setActiveTab('profile')}
           >
-            <Text style={[styles.tabText, activeTab === 'profile' && styles.tabTextActive]}>
+            <Text className={`text-sm font-semibold ${activeTab === 'profile' ? 'text-white' : 'text-[#9CA3AF]'}`}>
               Edit Profile
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'security' && styles.tabActive]}
+            className={`flex-1 py-3 items-center rounded-lg ${activeTab === 'security' ? 'bg-[#9333EA]' : 'bg-[#1F1F1F]'}`}
             onPress={() => setActiveTab('security')}
           >
-            <Text style={[styles.tabText, activeTab === 'security' && styles.tabTextActive]}>
+            <Text className={`text-sm font-semibold ${activeTab === 'security' ? 'text-white' : 'text-[#9CA3AF]'}`}>
               Security
             </Text>
           </TouchableOpacity>
@@ -187,11 +186,11 @@ export default function SettingsScreen() {
 
         {/* Edit Profile Tab */}
         {activeTab === 'profile' && (
-          <View style={styles.tabContent}>
-            <Text style={styles.sectionTitle}>Update Your Name</Text>
-            <Text style={styles.label}>Full Name</Text>
+          <View className="px-5">
+            <Text className="text-white text-lg font-bold mb-5">Update Your Name</Text>
+            <Text className="text-white text-sm font-semibold mb-2">Full Name</Text>
             <TextInput
-              style={[styles.input, nameError && styles.inputError]}
+              className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 text-white text-base mb-5 ${nameError ? 'border-[#EF4444]' : 'border-[#374151]'}`}
               placeholder="Enter your full name"
               placeholderTextColor="#6B7280"
               value={name}
@@ -202,18 +201,18 @@ export default function SettingsScreen() {
               autoCapitalize="words"
             />
             {nameError && (
-              <Text style={styles.errorText}>{nameError}</Text>
+              <Text className="text-[#EF4444] text-xs mt-[-20px] mb-3 px-1">{nameError}</Text>
             )}
 
             <TouchableOpacity
-              style={[styles.primaryButton, loadingName && styles.primaryButtonDisabled]}
+              className={`bg-[#9333EA] py-4 rounded-xl items-center mb-6 ${loadingName ? 'opacity-60' : ''}`}
               onPress={handleUpdateName}
               disabled={loadingName}
             >
               {loadingName ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.primaryButtonText}>Update Name</Text>
+                <Text className="text-white text-base font-semibold">Update Name</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -221,11 +220,11 @@ export default function SettingsScreen() {
 
         {/* Security Tab */}
         {activeTab === 'security' && (
-          <View style={styles.tabContent}>
-            <Text style={styles.sectionTitle}>Change Email</Text>
-            <Text style={styles.label}>Email</Text>
+          <View className="px-5">
+            <Text className="text-white text-lg font-bold mb-5">Change Email</Text>
+            <Text className="text-white text-sm font-semibold mb-2">Email</Text>
             <TextInput
-              style={[styles.input, emailError && styles.inputError]}
+              className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 text-white text-base mb-5 ${emailError ? 'border-[#EF4444]' : 'border-[#374151]'}`}
               placeholder="Enter your email"
               placeholderTextColor="#6B7280"
               value={email}
@@ -238,28 +237,28 @@ export default function SettingsScreen() {
               autoComplete="email"
             />
             {emailError && (
-              <Text style={styles.errorText}>{emailError}</Text>
+              <Text className="text-[#EF4444] text-xs mt-[-20px] mb-3 px-1">{emailError}</Text>
             )}
 
             <TouchableOpacity
-              style={[styles.primaryButton, loadingEmail && styles.primaryButtonDisabled]}
+              className={`bg-[#9333EA] py-4 rounded-xl items-center mb-6 ${loadingEmail ? 'opacity-60' : ''}`}
               onPress={handleUpdateEmail}
               disabled={loadingEmail}
             >
               {loadingEmail ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.primaryButtonText}>Update Email</Text>
+                <Text className="text-white text-base font-semibold">Update Email</Text>
               )}
             </TouchableOpacity>
 
-            <View style={styles.divider} />
+            <View className="h-px bg-[#1F1F1F] my-8" />
 
-            <Text style={styles.sectionTitle}>Change Password</Text>
-            <Text style={styles.label}>Current Password</Text>
-            <View style={styles.passwordContainer}>
+            <Text className="text-white text-lg font-bold mb-5">Change Password</Text>
+            <Text className="text-white text-sm font-semibold mb-2">Current Password</Text>
+            <View className="relative mb-5">
               <TextInput
-                style={styles.passwordInput}
+                className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 pr-12 text-white text-base"
                 placeholder="Enter current password"
                 placeholderTextColor="#6B7280"
                 value={currentPassword}
@@ -268,7 +267,7 @@ export default function SettingsScreen() {
                 autoCapitalize="none"
               />
               <TouchableOpacity
-                style={styles.eyeIcon}
+                className="absolute right-4 top-3.5 p-1"
                 onPress={() => setShowCurrentPassword(!showCurrentPassword)}
               >
                 <MaterialIcons
@@ -279,10 +278,10 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.label}>New Password</Text>
-            <View style={styles.passwordContainer}>
+            <Text className="text-white text-sm font-semibold mb-2">New Password</Text>
+            <View className="relative mb-5">
               <TextInput
-                style={[styles.passwordInput, passwordError && styles.inputError]}
+                className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 pr-12 text-white text-base ${passwordError ? 'border-[#EF4444]' : 'border-[#374151]'}`}
                 placeholder="Enter new password (min 8 characters)"
                 placeholderTextColor="#6B7280"
                 value={newPassword}
@@ -294,7 +293,7 @@ export default function SettingsScreen() {
                 autoCapitalize="none"
               />
               <TouchableOpacity
-                style={styles.eyeIcon}
+                className="absolute right-4 top-3.5 p-1"
                 onPress={() => setShowNewPassword(!showNewPassword)}
               >
                 <MaterialIcons
@@ -305,10 +304,10 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.label}>Confirm New Password</Text>
-            <View style={styles.passwordContainer}>
+            <Text className="text-white text-sm font-semibold mb-2">Confirm New Password</Text>
+            <View className="relative mb-5">
               <TextInput
-                style={[styles.passwordInput, passwordError && styles.inputError]}
+                className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 pr-12 text-white text-base ${passwordError ? 'border-[#EF4444]' : 'border-[#374151]'}`}
                 placeholder="Confirm new password"
                 placeholderTextColor="#6B7280"
                 value={confirmPassword}
@@ -320,7 +319,7 @@ export default function SettingsScreen() {
                 autoCapitalize="none"
               />
               <TouchableOpacity
-                style={styles.eyeIcon}
+                className="absolute right-4 top-3.5 p-1"
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
                 <MaterialIcons
@@ -331,18 +330,18 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
             {passwordError && (
-              <Text style={styles.errorText}>{passwordError}</Text>
+              <Text className="text-[#EF4444] text-xs mt-[-20px] mb-3 px-1">{passwordError}</Text>
             )}
 
             <TouchableOpacity
-              style={[styles.primaryButton, loadingPassword && styles.primaryButtonDisabled]}
+              className={`bg-[#9333EA] py-4 rounded-xl items-center mb-6 ${loadingPassword ? 'opacity-60' : ''}`}
               onPress={handleUpdatePassword}
               disabled={loadingPassword}
             >
               {loadingPassword ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.primaryButtonText}>Update Password</Text>
+                <Text className="text-white text-base font-semibold">Update Password</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -351,131 +350,4 @@ export default function SettingsScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F0F0F',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 24,
-    gap: 8,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 8,
-    backgroundColor: '#1F1F1F',
-  },
-  tabActive: {
-    backgroundColor: '#9333EA',
-  },
-  tabText: {
-    color: '#9CA3AF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  tabTextActive: {
-    color: '#FFFFFF',
-  },
-  tabContent: {
-    paddingHorizontal: 20,
-  },
-  sectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 20,
-  },
-  label: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#1F1F1F',
-    borderWidth: 1,
-    borderColor: '#374151',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    color: '#FFFFFF',
-    fontSize: 16,
-    marginBottom: 20,
-  },
-  passwordContainer: {
-    position: 'relative',
-    marginBottom: 20,
-  },
-  passwordInput: {
-    backgroundColor: '#1F1F1F',
-    borderWidth: 1,
-    borderColor: '#374151',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    paddingRight: 50,
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: 16,
-    top: 14,
-    padding: 4,
-  },
-  inputError: {
-    borderColor: '#EF4444',
-  },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 12,
-    marginTop: -16,
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  primaryButton: {
-    backgroundColor: '#9333EA',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  primaryButtonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#1F1F1F',
-    marginVertical: 32,
-  },
-});
 

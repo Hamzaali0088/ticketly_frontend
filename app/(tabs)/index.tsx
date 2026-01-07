@@ -7,7 +7,6 @@ import {
   Dimensions,
   Image,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -72,50 +71,50 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View className="flex-1 bg-[#0F0F0F] justify-center items-center">
         <ActivityIndicator size="large" color="#9333EA" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-[#0F0F0F]">
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.logo}>ticketly</Text>
+        <View className="pt-[60px] px-5 pb-5">
+          <Text className="text-3xl font-bold text-white mb-4">ticketly</Text>
           <TouchableOpacity
-            style={styles.searchBar}
+            className="bg-[#1F1F1F] rounded-xl py-3 px-4"
             onPress={() => router.push('/(tabs)/explore')}
           >
-            <Text style={styles.searchPlaceholder}>Search by event</Text>
+            <Text className="text-[#6B7280] text-sm">Search by event</Text>
           </TouchableOpacity>
         </View>
 
         {/* Featured Event Carousel */}
         {featuredEvent && (
-          <View style={styles.carouselContainer}>
+          <View className="mb-6">
             <TouchableOpacity
-              style={styles.featuredCard}
+              className="w-[calc(100%-40px)] h-[280px] rounded-2xl overflow-hidden mx-5 mb-3"
               onPress={() => router.push(`/event-details/${featuredEvent.id}`)}
               activeOpacity={0.9}
             >
               <Image
                 source={{ uri: featuredEvent.image }}
-                style={styles.featuredImage}
+                className="w-full h-full"
                 resizeMode="cover"
               />
-              <View style={styles.featuredOverlay}>
-                <View style={styles.featuredContent}>
-                  <Text style={styles.featuredTitle} numberOfLines={2}>
+              <View className="absolute bottom-0 left-0 right-0 bg-black/60 p-5">
+                <View className="gap-2">
+                  <Text className="text-white text-2xl font-bold" numberOfLines={2}>
                     {featuredEvent.title}
                   </Text>
-                  <Text style={styles.featuredLocation}>{featuredEvent.venue}</Text>
-                  <Text style={styles.featuredDate}>
+                  <Text className="text-[#D1D5DB] text-sm">{featuredEvent.venue}</Text>
+                  <Text className="text-[#9333EA] text-sm font-semibold">
                     {new Date(featuredEvent.date).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
@@ -124,10 +123,10 @@ export default function HomeScreen() {
                 </View>
               </View>
             </TouchableOpacity>
-            <View style={styles.carouselIndicators}>
-              <View style={[styles.indicator, styles.indicatorActive]} />
-              <View style={styles.indicator} />
-              <View style={styles.indicator} />
+            <View className="flex-row justify-center gap-2 mt-2">
+              <View className="w-6 h-2 rounded-full bg-white" />
+              <View className="w-2 h-2 rounded-full bg-[#374151]" />
+              <View className="w-2 h-2 rounded-full bg-[#374151]" />
             </View>
           </View>
         )}
@@ -135,14 +134,14 @@ export default function HomeScreen() {
 
 
         {/* Upcoming Events */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Upcoming Events</Text>
+        <View className="px-5">
+          <Text className="text-white text-xl font-bold mb-4">Upcoming Events</Text>
           {upcomingEvents.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No events available</Text>
+            <View className="py-10 items-center">
+              <Text className="text-[#6B7280] text-sm">No events available</Text>
             </View>
           ) : (
-            <View style={styles.eventsGrid}>
+            <View className="flex-row flex-wrap justify-between">
               {upcomingEvents.map((event) => (
                 <EventCard key={event.id} event={event} />
               ))}
@@ -153,138 +152,3 @@ export default function HomeScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F0F0F',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  logo: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  searchBar: {
-    backgroundColor: '#1F1F1F',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  searchPlaceholder: {
-    color: '#6B7280',
-    fontSize: 14,
-  },
-  carouselContainer: {
-    marginBottom: 24,
-  },
-  featuredCard: {
-    width: width - 40,
-    height: 280,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginHorizontal: 20,
-    marginBottom: 12,
-  },
-  featuredImage: {
-    width: '100%',
-    height: '100%',
-  },
-  featuredOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    padding: 20,
-  },
-  featuredContent: {
-    gap: 8,
-  },
-  featuredTitle: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  featuredLocation: {
-    color: '#D1D5DB',
-    fontSize: 14,
-  },
-  featuredDate: {
-    color: '#9333EA',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  carouselIndicators: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 8,
-  },
-  indicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#374151',
-  },
-  indicatorActive: {
-    width: 24,
-    backgroundColor: '#FFFFFF',
-  },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 20,
-    marginBottom: 32,
-  },
-  actionButton: {
-    alignItems: 'center',
-    backgroundColor: '#1F1F1F',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    minWidth: 100,
-  },
-  actionIcon: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  actionText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  section: {
-    paddingHorizontal: 20,
-  },
-  sectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  eventsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  emptyContainer: {
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: '#6B7280',
-    fontSize: 14,
-  },
-});

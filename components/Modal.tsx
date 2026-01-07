@@ -4,7 +4,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   Pressable,
 } from 'react-native';
 
@@ -50,24 +49,24 @@ export const Modal: React.FC<ModalProps> = ({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.container} onPress={(e) => e.stopPropagation()}>
-          {title && <Text style={styles.title}>{title}</Text>}
-          <Text style={styles.message}>{message}</Text>
-          <View style={styles.buttonContainer}>
+      <Pressable className="flex-1 bg-black/70 justify-center items-center p-5" onPress={onClose}>
+        <Pressable className="bg-[#1F1F1F] rounded-2xl p-6 w-full max-w-[400px]" onPress={(e) => e.stopPropagation()}>
+          {title && <Text className="text-white text-xl font-bold mb-3 text-center">{title}</Text>}
+          <Text className="text-[#D1D5DB] text-base leading-6 mb-6 text-center">{message}</Text>
+          <View className="flex-row gap-3">
             {secondaryButtonText && (
               <TouchableOpacity
-                style={[styles.button, styles.secondaryButton]}
+                className="flex-1 py-3.5 rounded-xl items-center bg-[#2F2F2F]"
                 onPress={handleSecondaryPress}
               >
-                <Text style={styles.secondaryButtonText}>{secondaryButtonText}</Text>
+                <Text className="text-white text-base font-semibold">{secondaryButtonText}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              style={[styles.button, styles.primaryButton]}
+              className="flex-1 py-3.5 rounded-xl items-center bg-[#9333EA]"
               onPress={handlePrimaryPress}
             >
-              <Text style={styles.primaryButtonText}>{primaryButtonText}</Text>
+              <Text className="text-white text-base font-semibold">{primaryButtonText}</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -75,61 +74,4 @@ export const Modal: React.FC<ModalProps> = ({
     </RNModal>
   );
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  container: {
-    backgroundColor: '#1F1F1F',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-  },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  message: {
-    color: '#D1D5DB',
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  primaryButton: {
-    backgroundColor: '#9333EA',
-  },
-  secondaryButton: {
-    backgroundColor: '#2F2F2F',
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  secondaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
 

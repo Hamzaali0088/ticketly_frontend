@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -198,19 +197,19 @@ export default function LoginScreen() {
   if (mode === 'signup' && loginMethod === 'email' && !otpSent) {
     return (
       <KeyboardAvoidingView
-        style={styles.container}
+        className="flex-1 bg-[#0F0F0F]"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Text style={styles.logo}>ticketly</Text>
-            <Text style={styles.subtitle}>Create your account</Text>
+        <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: 'center', alignItems: 'center' }}>
+          <View className="items-center mb-12">
+            <Text className="text-4xl font-bold text-white mb-4">ticketly</Text>
+            <Text className="text-base text-[#9CA3AF] text-center">Create your account</Text>
           </View>
 
-          <View style={styles.form}>
-            <Text style={styles.label}>Full Name</Text>
+          <View className="w-full">
+            <Text className="text-white text-sm font-semibold mb-2">Full Name</Text>
             <TextInput
-              style={styles.input}
+              className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base mb-2"
               placeholder="e.g. Fatima Ali"
               placeholderTextColor="#6B7280"
               value={name}
@@ -218,9 +217,9 @@ export default function LoginScreen() {
               autoCapitalize="words"
             />
 
-            <Text style={styles.label}>Email</Text>
+            <Text className="text-white text-sm font-semibold mb-2">Email</Text>
             <TextInput
-              style={[styles.input, errorMessage && styles.inputError]}
+              className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 text-white text-base mb-2 ${errorMessage ? 'border-[#EF4444]' : 'border-[#374151]'}`}
               placeholder="e.g. fatimaali@gmail.com"
               placeholderTextColor="#6B7280"
               value={email}
@@ -234,13 +233,13 @@ export default function LoginScreen() {
               autoComplete="email"
             />
             {errorMessage && (
-              <Text style={styles.errorText}>{errorMessage}</Text>
+              <Text className="text-[#EF4444] text-xs mb-3 mt-[-4px] px-1">{errorMessage}</Text>
             )}
 
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordContainer}>
+            <Text className="text-white text-sm font-semibold mb-2">Password</Text>
+            <View className="relative mb-2">
               <TextInput
-                style={styles.passwordInput}
+                className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 pr-12 text-white text-base"
                 placeholder="At least 8 characters"
                 placeholderTextColor="#6B7280"
                 value={password}
@@ -249,7 +248,7 @@ export default function LoginScreen() {
                 autoCapitalize="none"
               />
               <TouchableOpacity
-                style={styles.eyeIcon}
+                className="absolute right-4 top-3.5 p-1"
                 onPress={() => setShowSignupPassword(!showSignupPassword)}
               >
                 <MaterialIcons
@@ -261,19 +260,19 @@ export default function LoginScreen() {
             </View>
 
             <TouchableOpacity
-              style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+              className={`bg-[#9333EA] py-4 rounded-xl items-center mb-3 ${loading ? 'opacity-60' : ''}`}
               onPress={handleSignup}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.primaryButtonText}>Sign Up</Text>
+                <Text className="text-white text-base font-semibold">Sign Up</Text>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.linkButton}
+              className="items-center mb-3"
               onPress={() => {
                 setMode('login');
                 setName('');
@@ -282,11 +281,11 @@ export default function LoginScreen() {
                 setErrorMessage('');
               }}
             >
-              <Text style={styles.linkText}>Already have an account? Login</Text>
+              <Text className="text-[#9333EA] text-sm font-semibold">Already have an account? Login</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.secondaryButton}
+              className="bg-[#1F1F1F] border border-[#374151] py-4 rounded-xl items-center"
               onPress={() => {
                 setLoginMethod(null);
                 setName('');
@@ -295,7 +294,7 @@ export default function LoginScreen() {
                 setErrorMessage('');
               }}
             >
-              <Text style={styles.secondaryButtonText}>Back</Text>
+              <Text className="text-white text-base font-semibold">Back</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -307,19 +306,19 @@ export default function LoginScreen() {
   if (mode === 'login' && loginMethod === 'email' && !otpSent) {
     return (
       <KeyboardAvoidingView
-        style={styles.container}
+        className="flex-1 bg-[#0F0F0F]"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Text style={styles.logo}>ticketly</Text>
-            <Text style={styles.subtitle}>Login to your account</Text>
+        <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: 'center', alignItems: 'center' }}>
+          <View className="items-center mb-12">
+            <Text className="text-4xl font-bold text-white mb-4">ticketly</Text>
+            <Text className="text-base text-[#9CA3AF] text-center">Login to your account</Text>
           </View>
 
-          <View style={styles.form}>
-            <Text style={styles.label}>Email</Text>
+          <View className="w-full">
+            <Text className="text-white text-sm font-semibold mb-2">Email</Text>
             <TextInput
-              style={[styles.input, loginError && styles.inputError]}
+              className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 text-white text-base mb-2 ${loginError ? 'border-[#EF4444]' : 'border-[#374151]'}`}
               placeholder="e.g. fatimaali@gmail.com"
               placeholderTextColor="#6B7280"
               value={email}
@@ -333,10 +332,10 @@ export default function LoginScreen() {
               autoComplete="email"
             />
 
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordContainer}>
+            <Text className="text-white text-sm font-semibold mb-2">Password</Text>
+            <View className="relative mb-2">
               <TextInput
-                style={[styles.passwordInput, loginError && styles.inputError]}
+                className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 pr-12 text-white text-base ${loginError ? 'border-[#EF4444]' : 'border-[#374151]'}`}
                 placeholder="Enter your password"
                 placeholderTextColor="#6B7280"
                 value={password}
@@ -349,7 +348,7 @@ export default function LoginScreen() {
                 autoCapitalize="none"
               />
               <TouchableOpacity
-                style={styles.eyeIcon}
+                className="absolute right-4 top-3.5 p-1"
                 onPress={() => setShowPassword(!showPassword)}
               >
                 <MaterialIcons
@@ -360,23 +359,23 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
             {loginError && (
-              <Text style={styles.errorText}>{loginError}</Text>
+              <Text className="text-[#EF4444] text-xs mb-3 mt-[-4px] px-1">{loginError}</Text>
             )}
 
             <TouchableOpacity
-              style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+              className={`bg-[#9333EA] py-4 rounded-xl items-center mb-3 ${loading ? 'opacity-60' : ''}`}
               onPress={handleEmailSubmit}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.primaryButtonText}>Send OTP</Text>
+                <Text className="text-white text-base font-semibold">Send OTP</Text>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.linkButton}
+              className="items-center mb-3"
               onPress={() => {
                 setMode('signup');
                 setEmail('');
@@ -384,11 +383,11 @@ export default function LoginScreen() {
                 setLoginError('');
               }}
             >
-              <Text style={styles.linkText}>Don't have an account? Sign Up</Text>
+              <Text className="text-[#9333EA] text-sm font-semibold">Don't have an account? Sign Up</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.secondaryButton}
+              className="bg-[#1F1F1F] border border-[#374151] py-4 rounded-xl items-center"
               onPress={() => {
                 setLoginMethod(null);
                 setEmail('');
@@ -396,7 +395,7 @@ export default function LoginScreen() {
                 setLoginError('');
               }}
             >
-              <Text style={styles.secondaryButtonText}>Back</Text>
+              <Text className="text-white text-base font-semibold">Back</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -407,19 +406,19 @@ export default function LoginScreen() {
   if (loginMethod === 'email' && otpSent) {
     return (
       <KeyboardAvoidingView
-        style={styles.container}
+        className="flex-1 bg-[#0F0F0F]"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Text style={styles.logo}>ticketly</Text>
-            <Text style={styles.subtitle}>Enter the OTP sent to {email}</Text>
+        <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: 'center', alignItems: 'center' }}>
+          <View className="items-center mb-12">
+            <Text className="text-4xl font-bold text-white mb-4">ticketly</Text>
+            <Text className="text-base text-[#9CA3AF] text-center">Enter the OTP sent to {email}</Text>
           </View>
 
-          <View style={styles.form}>
-            <Text style={styles.label}>OTP</Text>
+          <View className="w-full">
+            <Text className="text-white text-sm font-semibold mb-2">OTP</Text>
             <TextInput
-              style={[styles.input, otpError && styles.inputError]}
+              className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 text-white text-base mb-2 ${otpError ? 'border-[#EF4444]' : 'border-[#374151]'}`}
               placeholder="Enter 6-digit OTP"
               placeholderTextColor="#6B7280"
               value={otp}
@@ -432,34 +431,34 @@ export default function LoginScreen() {
               maxLength={6}
             />
             {otpError && (
-              <Text style={styles.errorText}>{otpError}</Text>
+              <Text className="text-[#EF4444] text-xs mb-3 mt-[-4px] px-1">{otpError}</Text>
             )}
 
             <TouchableOpacity
-              style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+              className={`bg-[#9333EA] py-4 rounded-xl items-center mb-3 ${loading ? 'opacity-60' : ''}`}
               onPress={handleOTPSubmit}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.primaryButtonText}>Verify OTP</Text>
+                <Text className="text-white text-base font-semibold">Verify OTP</Text>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.linkButton}
+              className="items-center mb-3"
               onPress={() => {
                 setOtpSent(false);
                 setOtp('');
                 setOtpError('');
               }}
             >
-              <Text style={styles.linkText}>Resend OTP</Text>
+              <Text className="text-[#9333EA] text-sm font-semibold">Resend OTP</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.secondaryButton}
+              className="bg-[#1F1F1F] border border-[#374151] py-4 rounded-xl items-center"
               onPress={() => {
                 setLoginMethod(null);
                 setOtpSent(false);
@@ -471,7 +470,7 @@ export default function LoginScreen() {
                 setOtpError('');
               }}
             >
-              <Text style={styles.secondaryButtonText}>Back</Text>
+              <Text className="text-white text-base font-semibold">Back</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -480,256 +479,57 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.logo}>ticketly</Text>
-          <Text style={styles.subtitle}>Login via google account to proceed.</Text>
+    <View className="flex-1 bg-[#0F0F0F]">
+      <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: 'center', alignItems: 'center' }}>
+        <View className="items-center mb-12">
+          <Text className="text-4xl font-bold text-white mb-4">ticketly</Text>
+          <Text className="text-base text-[#9CA3AF] text-center">Login via google account to proceed.</Text>
         </View>
 
-        <View style={styles.buttonContainer} className='gap-4'>
-          <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
-            <Text style={styles.googleIcon}>G</Text>
-            <Text style={styles.googleButtonText}>Sign in with Google</Text>
+        <View className="w-full mb-12 gap-4">
+          <TouchableOpacity className="bg-white flex-row items-center justify-center py-4 px-6 rounded-xl mb-4" onPress={handleGoogleLogin}>
+            <Text className="text-2xl font-bold text-[#4285F4] mr-3">G</Text>
+            <Text className="text-[#1F1F1F] text-base font-semibold">Sign in with Google</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.emailButton}
+            className="bg-[#1F1F1F] border border-[#374151] py-4 px-6 rounded-xl"
             onPress={() => {
               setLoginMethod('email');
               setMode('login');
             }}
           >
-            <Text style={styles.emailButtonText}>Login with Email</Text>
+            <Text className="text-white text-base font-semibold text-center">Login with Email</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.signupButton}
+            className="bg-[#9333EA] py-4 px-6 rounded-xl"
             onPress={() => {
               setLoginMethod('email');
               setMode('signup');
             }}
           >
-            <Text style={styles.signupButtonText}>Sign Up with Email</Text>
+            <Text className="text-white text-base font-semibold text-center">Sign Up with Email</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Contact Us</Text>
-          <Text style={styles.footerText}>Privacy Policy</Text>
-          <Text style={styles.footerText}>Terms of Service</Text>
+        <View className="flex-row gap-4 mb-6">
+          <Text className="text-[#9CA3AF] text-sm">Contact Us</Text>
+          <Text className="text-[#9CA3AF] text-sm">Privacy Policy</Text>
+          <Text className="text-[#9CA3AF] text-sm">Terms of Service</Text>
         </View>
 
-        <View style={styles.socialContainer}>
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialText}>in</Text>
+        <View className="flex-row gap-3 mb-6">
+          <TouchableOpacity className="bg-[#1F1F1F] w-10 h-10 rounded-lg items-center justify-center">
+            <Text className="text-white text-base">in</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialText}>📷</Text>
+          <TouchableOpacity className="bg-[#1F1F1F] w-10 h-10 rounded-lg items-center justify-center">
+            <Text className="text-white text-base">📷</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.copyright}>2025 Ticketly. All rights reserved.</Text>
+        <Text className="text-[#6B7280] text-xs text-center">2025 Ticketly. All rights reserved.</Text>
       </ScrollView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F0F0F',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 48,
-  },
-  logo: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#9CA3AF',
-    textAlign: 'center',
-  },
-  buttonContainer: {
-    width: '100%',
-    marginBottom: 48,
-  },
-  googleButton: {
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  googleIcon: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#4285F4',
-    marginRight: 12,
-  },
-  googleButtonText: {
-    color: '#1F1F1F',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  emailButton: {
-    backgroundColor: '#1F1F1F',
-    borderWidth: 1,
-    borderColor: '#374151',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  emailButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  signupButton: {
-    backgroundColor: '#9333EA',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  signupButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  form: {
-    width: '100%',
-  },
-  label: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#1F1F1F',
-    borderWidth: 1,
-    borderColor: '#374151',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    color: '#FFFFFF',
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  passwordContainer: {
-    position: 'relative',
-    marginBottom: 8,
-  },
-  passwordInput: {
-    backgroundColor: '#1F1F1F',
-    borderWidth: 1,
-    borderColor: '#374151',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    paddingRight: 50,
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: 16,
-    top: 14,
-    padding: 4,
-  },
-  inputError: {
-    borderColor: '#EF4444',
-    borderWidth: 1,
-  },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 12,
-    marginBottom: 12,
-    marginTop: -4,
-    paddingHorizontal: 4,
-  },
-  primaryButton: {
-    backgroundColor: '#9333EA',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  primaryButtonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    backgroundColor: '#1F1F1F',
-    borderWidth: 1,
-    borderColor: '#374151',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  linkButton: {
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  linkText: {
-    color: '#9333EA',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  footer: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 24,
-  },
-  footerText: {
-    color: '#9CA3AF',
-    fontSize: 14,
-  },
-  socialContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
-  socialButton: {
-    backgroundColor: '#1F1F1F',
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  socialText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  copyright: {
-    color: '#6B7280',
-    fontSize: 12,
-    textAlign: 'center',
-  },
-});

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   Image,
   Alert,
@@ -38,14 +37,14 @@ export default function EventDetailsScreen() {
 
   if (!event) {
     return (
-      <View style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Event not found</Text>
+      <View className="flex-1 bg-[#0F0F0F]">
+        <View className="flex-1 items-center justify-center p-10">
+          <Text className="text-[#EF4444] text-lg mb-6">Event not found</Text>
           <TouchableOpacity
-            style={styles.backButton}
+            className="bg-[#9333EA] py-3 px-6 rounded-xl"
             onPress={() => router.back()}
           >
-            <Text style={styles.backButtonText}>Go Back</Text>
+            <Text className="text-white text-base font-semibold">Go Back</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -126,27 +125,27 @@ export default function EventDetailsScreen() {
   const timeRemaining = getTimeRemaining(event.registrationDeadline);
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-[#0F0F0F]">
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
         {/* Header Image */}
-        <View style={styles.imageContainer}>
+        <View className="w-full h-[300px] relative">
           <Image
             source={{ uri: event.image }}
-            style={styles.headerImage}
+            className="w-full h-full"
             resizeMode="cover"
           />
           <TouchableOpacity
-            style={styles.backButton}
+            className="absolute top-[50px] left-5 bg-black/50 w-10 h-10 rounded-full items-center justify-center"
             onPress={() => router.back()}
           >
             <MaterialIcons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.likeButton}
+            className="absolute top-[50px] right-5 bg-black/50 w-10 h-10 rounded-full items-center justify-center"
             onPress={handleLike}
           >
             <MaterialIcons 
@@ -158,11 +157,11 @@ export default function EventDetailsScreen() {
         </View>
 
         {/* Event Info Card */}
-        <View style={styles.infoCard}>
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>{event.title}</Text>
-            <View style={styles.accessBadge}>
-              <Text style={styles.accessText}>
+        <View className="bg-[#1F1F1F] rounded-t-3xl p-5 -mt-5">
+          <View className="flex-row justify-between items-start mb-6">
+            <Text className="text-white text-2xl font-bold flex-1 mr-3">{event.title}</Text>
+            <View className="bg-[#374151] py-1.5 px-3 rounded-xl">
+              <Text className="text-[#D1D5DB] text-xs font-semibold">
                 {event.accessType === 'open' ? 'Open for all' : event.accessType === 'paid' ? 'Paid' : 'Invite only'}
               </Text>
             </View>
@@ -170,15 +169,15 @@ export default function EventDetailsScreen() {
 
           {/* Registration Deadline */}
           {event.registrationDeadline && (
-            <View style={styles.infoRow}>
-              <MaterialIcons name="access-time" size={20} color="#9CA3AF" style={styles.infoIcon} />
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Registration Deadline</Text>
-                <Text style={styles.infoValue}>
+            <View className="flex-row mb-5 items-start">
+              <MaterialIcons name="access-time" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+              <View className="flex-1">
+                <Text className="text-white text-sm font-semibold mb-1">Registration Deadline</Text>
+                <Text className="text-[#D1D5DB] text-sm mb-0.5">
                   {formatDate(event.registrationDeadline)}, {formatTime(event.time)}
                 </Text>
                 {timeRemaining && (
-                  <Text style={styles.timeRemaining}>
+                  <Text className="text-[#EF4444] text-xs mt-1">
                     Time remaining: {timeRemaining}
                   </Text>
                 )}
@@ -187,15 +186,15 @@ export default function EventDetailsScreen() {
           )}
 
           {/* Event Date & Time */}
-          <View style={styles.infoRow}>
-            <MaterialIcons name="calendar-today" size={20} color="#9CA3AF" style={styles.infoIcon} />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Event Date & Time</Text>
-              <Text style={styles.infoValue}>
+          <View className="flex-row mb-5 items-start">
+            <MaterialIcons name="calendar-today" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+            <View className="flex-1">
+              <Text className="text-white text-sm font-semibold mb-1">Event Date & Time</Text>
+              <Text className="text-[#D1D5DB] text-sm mb-0.5">
                 {formatDate(event.date)}, {formatTime(event.time)} till
               </Text>
               {event.endTime && (
-                <Text style={styles.infoValue}>
+                <Text className="text-[#D1D5DB] text-sm mb-0.5">
                   {formatDate(event.date)}, {formatTime(event.endTime)}
                 </Text>
               )}
@@ -203,22 +202,22 @@ export default function EventDetailsScreen() {
           </View>
 
           {/* Location */}
-          <View style={styles.infoRow}>
-            <MaterialIcons name="location-on" size={20} color="#9CA3AF" style={styles.infoIcon} />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Location</Text>
-              <Text style={styles.infoValue}>{event.venue}</Text>
-              <Text style={styles.infoValue}>{event.city}</Text>
+          <View className="flex-row mb-5 items-start">
+            <MaterialIcons name="location-on" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+            <View className="flex-1">
+              <Text className="text-white text-sm font-semibold mb-1">Location</Text>
+              <Text className="text-[#D1D5DB] text-sm mb-0.5">{event.venue}</Text>
+              <Text className="text-[#D1D5DB] text-sm mb-0.5">{event.city}</Text>
             </View>
-            <MaterialIcons name="arrow-forward" size={20} color="#9CA3AF" style={styles.arrowIcon} />
+            <MaterialIcons name="arrow-forward" size={20} color="#9CA3AF" style={{ marginLeft: 8, marginTop: 2 }} />
           </View>
 
           {/* Price */}
-          <View style={styles.infoRow}>
-            <MaterialIcons name="confirmation-number" size={20} color="#9CA3AF" style={styles.infoIcon} />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Registration Starting From</Text>
-              <Text style={styles.infoValue}>
+          <View className="flex-row mb-5 items-start">
+            <MaterialIcons name="confirmation-number" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+            <View className="flex-1">
+              <Text className="text-white text-sm font-semibold mb-1">Registration Starting From</Text>
+              <Text className="text-[#D1D5DB] text-sm mb-0.5">
                 {event.price ? `PKR ${event.price.toLocaleString()}` : 'Fee would be calculated at the time of checkout'}
               </Text>
             </View>
@@ -226,39 +225,39 @@ export default function EventDetailsScreen() {
 
           {/* Register Button */}
           <TouchableOpacity
-            style={[styles.registerButton, isRegistered && styles.registeredButton]}
+            className={`py-4 rounded-xl items-center mt-2 ${isRegistered ? 'bg-[#10B981]' : 'bg-[#9333EA]'}`}
             onPress={isRegistered ? handleViewTicket : handleRegister}
           >
-            <Text style={styles.registerButtonText}>
+            <Text className="text-white text-base font-bold">
               {isRegistered ? 'View Ticket' : 'Register Now'}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Event Description Section */}
-        <View style={styles.descriptionSection}>
-          <Text style={styles.sectionTitle}>Event Description</Text>
-          <Text style={styles.descriptionText}>
+        <View className="p-5 border-t border-[#1F1F1F]">
+          <Text className="text-white text-xl font-bold mb-3">Event Description</Text>
+          <Text className="text-[#D1D5DB] text-sm leading-6 mb-3">
             {event.fullDescription || event.description}
           </Text>
           
           {event.entryPolicy && (
             <>
-              <Text style={styles.policyTitle}>Entry Policy:</Text>
-              <Text style={styles.policyText}>• {event.entryPolicy}</Text>
+              <Text className="text-white text-base font-semibold mt-3 mb-2">Entry Policy:</Text>
+              <Text className="text-[#D1D5DB] text-sm leading-6">• {event.entryPolicy}</Text>
             </>
           )}
           
-          <TouchableOpacity style={styles.viewMoreButton}>
-            <Text style={styles.viewMoreText}>View more</Text>
+          <TouchableOpacity className="flex-row items-center mt-3">
+            <Text className="text-[#9333EA] text-sm font-semibold mr-1">View more</Text>
             <MaterialIcons name="expand-more" size={16} color="#9333EA" />
           </TouchableOpacity>
         </View>
 
         {/* Organized By */}
-        <View style={styles.organizerSection}>
-          <Text style={styles.sectionTitle}>Organized By</Text>
-          <Text style={styles.organizerName}>{event.organizerName}</Text>
+        <View className="p-5 border-t border-[#1F1F1F]">
+          <Text className="text-white text-xl font-bold mb-3">Organized By</Text>
+          <Text className="text-white text-base font-semibold">{event.organizerName}</Text>
         </View>
       </ScrollView>
 
@@ -279,187 +278,4 @@ export default function EventDetailsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F0F0F',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
-  imageContainer: {
-    width: '100%',
-    height: 300,
-    position: 'relative',
-  },
-  headerImage: {
-    width: '100%',
-    height: '100%',
-  },
-  backButton: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  likeButton: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoCard: {
-    backgroundColor: '#1F1F1F',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    marginTop: -20,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 24,
-  },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '700',
-    flex: 1,
-    marginRight: 12,
-  },
-  accessBadge: {
-    backgroundColor: '#374151',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
-  accessText: {
-    color: '#D1D5DB',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    marginBottom: 20,
-    alignItems: 'flex-start',
-  },
-  infoIcon: {
-    marginRight: 12,
-    marginTop: 2,
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoLabel: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  infoValue: {
-    color: '#D1D5DB',
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  timeRemaining: {
-    color: '#EF4444',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  arrowIcon: {
-    marginLeft: 8,
-    marginTop: 2,
-  },
-  registerButton: {
-    backgroundColor: '#9333EA',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  registeredButton: {
-    backgroundColor: '#10B981',
-  },
-  registerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  descriptionSection: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#1F1F1F',
-  },
-  sectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-  descriptionText: {
-    color: '#D1D5DB',
-    fontSize: 14,
-    lineHeight: 22,
-    marginBottom: 12,
-  },
-  policyTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  policyText: {
-    color: '#D1D5DB',
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  viewMoreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  viewMoreText: {
-    color: '#9333EA',
-    fontSize: 14,
-    fontWeight: '600',
-    marginRight: 4,
-  },
-  organizerSection: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#1F1F1F',
-  },
-  organizerName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-  },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 18,
-    marginBottom: 24,
-  },
-});
 

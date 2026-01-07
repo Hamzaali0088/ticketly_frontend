@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Event } from '@/data/mockData';
 import { useRouter } from 'expo-router';
 
@@ -30,28 +30,28 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      className="bg-[#1F1F1F] rounded-xl overflow-hidden mb-4 w-[48%]"
       onPress={handlePress}
       activeOpacity={0.8}
     >
-      <View style={styles.imageContainer}>
+      <View className="w-full h-[180px] relative">
         <Image
           source={{ uri: event.image }}
-          style={styles.image}
+          className="w-full h-full"
           resizeMode="cover"
         />
-        <View style={styles.dateBadge}>
-          <Text style={styles.dateMonth}>{month}</Text>
-          <Text style={styles.dateDay}>{day}</Text>
+        <View className="absolute top-2 right-2 bg-[#EF4444] rounded-lg py-1.5 px-2.5 items-center min-w-[50px]">
+          <Text className="text-white text-[10px] font-semibold uppercase">{month}</Text>
+          <Text className="text-white text-base font-bold">{day}</Text>
         </View>
       </View>
-      <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>
+      <View className="p-3">
+        <Text className="text-white text-base font-semibold mb-2" numberOfLines={2}>
           {event.title}
         </Text>
-        <View style={styles.locationContainer}>
-          <Text style={styles.locationIcon}>📍</Text>
-          <Text style={styles.location} numberOfLines={1}>
+        <View className="flex-row items-center">
+          <Text className="text-xs mr-1">📍</Text>
+          <Text className="text-[#9CA3AF] text-xs flex-1" numberOfLines={1}>
             {event.venue.length > 30 ? `${event.venue.substring(0, 30)}...` : event.venue}
           </Text>
         </View>
@@ -59,67 +59,4 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
     </TouchableOpacity>
   );
 };
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#1F1F1F',
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 16,
-    width: '48%',
-  },
-  imageContainer: {
-    width: '100%',
-    height: 180,
-    position: 'relative',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  dateBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#EF4444',
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    minWidth: 50,
-  },
-  dateMonth: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  dateDay: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  content: {
-    padding: 12,
-  },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  locationIcon: {
-    fontSize: 12,
-    marginRight: 4,
-  },
-  location: {
-    color: '#9CA3AF',
-    fontSize: 12,
-    flex: 1,
-  },
-});
 
