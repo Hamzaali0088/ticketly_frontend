@@ -146,7 +146,13 @@ export default function LoginScreen() {
         if (response.accessToken && response.refreshToken && response.user) {
           // User is verified - save tokens, set user in store, and redirect
           await setTokens(response.accessToken, response.refreshToken);
-          login(response.user);
+          // Transform user object to match UserProfile type (id -> _id)
+          const userProfile = {
+            ...response.user,
+            _id: response.user.id,
+          };
+          login(userProfile);
+          // Redirect to home page (tabs)
           router.replace('/(tabs)');
           // Note: No need to set loading to false as we're redirecting
         } else if (response.tempToken) {
@@ -158,17 +164,17 @@ export default function LoginScreen() {
           setLoading(false);
         } else {
           // Show backend error message inline
-          setLoginError(response.message || 'Failed to send OTP');
+          setLoginError(response.message || 'Login failed');
           setLoading(false);
         }
       } else {
         // Show backend error message inline
-        setLoginError(response.message || 'Failed to send OTP');
+        setLoginError(response.message || 'Login failed');
         setLoading(false);
       }
     } catch (error: any) {
       // Extract error message from response
-      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to send OTP. Please try again.';
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Login failed. Please try again.';
       setLoginError(errorMsg);
       setLoading(false);
     }
@@ -389,7 +395,7 @@ export default function LoginScreen() {
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text className="text-white text-base font-semibold">Send OTP</Text>
+                <Text className="text-white text-base font-semibold">Login</Text>
               )}
             </TouchableOpacity>
 

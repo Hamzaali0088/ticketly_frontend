@@ -6,40 +6,90 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
-import { getEventById } from '@/data/mockData';
+import { eventsAPI, type Event } from '@/lib/api/events';
 import { Modal } from '@/components/Modal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function EventDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const events = useAppStore((state) => state.events);
   const user = useAppStore((state) => state.user);
   const toggleEventLike = useAppStore((state) => state.toggleEventLike);
   const registerForEvent = useAppStore((state) => state.registerForEvent);
   
-  const event = getEventById(id || '');
+  const [event, setEvent] = useState<Event | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
 
+  // Fetch event from API
+  useEffect(() => {
+    const fetchEvent = async () => {
+      if (!id) {
+        setError('Event ID is required');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await eventsAPI.getEventById(id);
+        
+        if (response.success && response.event) {
+          // Transform backend event to match frontend structure
+          const transformedEvent: Event = {
+            ...response.event,
+            _id: response.event.id || response.event._id,
+          };
+          setEvent(transformedEvent);
+        } else {
+          setError('Event not found');
+        }
+      } catch (err: any) {
+        console.error('Error fetching event:', err);
+        const errorMessage = err.response?.data?.message || err.message || 'Failed to load event';
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvent();
+  }, [id]);
+
   useEffect(() => {
     if (event && user) {
       const userId = (user as any)._id || user.id;
-      setIsLiked(event.likedUsers.includes(userId));
-      setIsRegistered(event.registeredUsers.includes(userId));
+      // Note: Backend event doesn't have likedUsers/registeredUsers, 
+      // so we'll need to check from store or make separate API calls
+      // For now, we'll keep the state management but it may need adjustment
     }
   }, [event, user]);
 
-  if (!event) {
+  if (loading) {
     return (
       <View className="flex-1 bg-[#0F0F0F]">
         <View className="flex-1 items-center justify-center p-10">
-          <Text className="text-[#EF4444] text-lg mb-6">Event not found</Text>
+          <ActivityIndicator size="large" color="#9333EA" />
+          <Text className="text-white text-base mt-4">Loading event...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error || !event) {
+    return (
+      <View className="flex-1 bg-[#0F0F0F]">
+        <View className="flex-1 items-center justify-center p-10">
+          <Text className="text-[#EF4444] text-lg mb-6">{error || 'Event not found'}</Text>
           <TouchableOpacity
             className="bg-[#9333EA] py-3 px-6 rounded-xl"
             onPress={() => router.back()}
@@ -60,8 +110,10 @@ export default function EventDetailsScreen() {
       ]);
       return;
     }
-    if (user) {
-      toggleEventLike(event.id, user._id || user.id);
+    if (user && event) {
+      const eventId = event._id || (event as any).id;
+      const userId = (user as any)._id || user.id;
+      toggleEventLike(eventId, userId);
       setIsLiked(!isLiked);
     }
   };
@@ -75,22 +127,27 @@ export default function EventDetailsScreen() {
       ]);
       return;
     }
-    if (!user) return;
+    if (!user || !event) return;
+
+    const eventId = event._id || (event as any).id;
+    const userId = (user as any)._id || user.id;
 
     if (isRegistered) {
       Alert.alert('Already Registered', 'You are already registered for this event');
-      router.push(`/ticket/${event.id}`);
+      router.push(`/ticket/${eventId}`);
       return;
     }
 
-    registerForEvent(event.id, user._id || user.id);
+    registerForEvent(eventId, userId);
     setIsRegistered(true);
     setModalMessage('Successfully registered for the event!');
     setShowModal(true);
   };
 
   const handleViewTicket = () => {
-    router.push(`/ticket/${event.id}`);
+    if (!event) return;
+    const eventId = event._id || (event as any).id;
+    router.push(`/ticket/${eventId}`);
   };
 
   const formatDate = (dateString: string) => {
@@ -106,24 +163,6 @@ export default function EventDetailsScreen() {
     return timeString;
   };
 
-  const getTimeRemaining = (deadline?: string) => {
-    if (!deadline) return null;
-    const now = new Date();
-    const deadlineDate = new Date(deadline);
-    const diff = deadlineDate.getTime() - now.getTime();
-    
-    if (diff <= 0) return 'Expired';
-    
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-    
-    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
-  };
-
-  const timeRemaining = getTimeRemaining(event.registrationDeadline);
-
   return (
     <View className="flex-1 bg-[#0F0F0F]">
       <ScrollView
@@ -134,7 +173,7 @@ export default function EventDetailsScreen() {
         {/* Header Image */}
         <View className="w-full h-[300px] relative">
           <Image
-            source={{ uri: event.image }}
+            source={{ uri: event.image || 'https://via.placeholder.com/400' }}
             className="w-full h-full"
             resizeMode="cover"
           />
@@ -162,28 +201,10 @@ export default function EventDetailsScreen() {
             <Text className="text-white text-2xl font-bold flex-1 mr-3">{event.title}</Text>
             <View className="bg-[#374151] py-1.5 px-3 rounded-xl">
               <Text className="text-[#D1D5DB] text-xs font-semibold">
-                {event.accessType === 'open' ? 'Open for all' : event.accessType === 'paid' ? 'Paid' : 'Invite only'}
+                {event.status === 'approved' ? 'Approved' : event.status === 'pending' ? 'Pending' : 'Draft'}
               </Text>
             </View>
           </View>
-
-          {/* Registration Deadline */}
-          {event.registrationDeadline && (
-            <View className="flex-row mb-5 items-start">
-              <MaterialIcons name="access-time" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
-              <View className="flex-1">
-                <Text className="text-white text-sm font-semibold mb-1">Registration Deadline</Text>
-                <Text className="text-[#D1D5DB] text-sm mb-0.5">
-                  {formatDate(event.registrationDeadline)}, {formatTime(event.time)}
-                </Text>
-                {timeRemaining && (
-                  <Text className="text-[#EF4444] text-xs mt-1">
-                    Time remaining: {timeRemaining}
-                  </Text>
-                )}
-              </View>
-            </View>
-          )}
 
           {/* Event Date & Time */}
           <View className="flex-row mb-5 items-start">
@@ -191,13 +212,8 @@ export default function EventDetailsScreen() {
             <View className="flex-1">
               <Text className="text-white text-sm font-semibold mb-1">Event Date & Time</Text>
               <Text className="text-[#D1D5DB] text-sm mb-0.5">
-                {formatDate(event.date)}, {formatTime(event.time)} till
+                {formatDate(event.date)}, {formatTime(event.time)}
               </Text>
-              {event.endTime && (
-                <Text className="text-[#D1D5DB] text-sm mb-0.5">
-                  {formatDate(event.date)}, {formatTime(event.endTime)}
-                </Text>
-              )}
             </View>
           </View>
 
@@ -206,20 +222,23 @@ export default function EventDetailsScreen() {
             <MaterialIcons name="location-on" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
             <View className="flex-1">
               <Text className="text-white text-sm font-semibold mb-1">Location</Text>
-              <Text className="text-[#D1D5DB] text-sm mb-0.5">{event.venue}</Text>
-              <Text className="text-[#D1D5DB] text-sm mb-0.5">{event.city}</Text>
+              <Text className="text-[#D1D5DB] text-sm mb-0.5">{event.location}</Text>
             </View>
-            <MaterialIcons name="arrow-forward" size={20} color="#9CA3AF" style={{ marginLeft: 8, marginTop: 2 }} />
           </View>
 
           {/* Price */}
           <View className="flex-row mb-5 items-start">
             <MaterialIcons name="confirmation-number" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
             <View className="flex-1">
-              <Text className="text-white text-sm font-semibold mb-1">Registration Starting From</Text>
+              <Text className="text-white text-sm font-semibold mb-1">Ticket Price</Text>
               <Text className="text-[#D1D5DB] text-sm mb-0.5">
-                {event.price ? `PKR ${event.price.toLocaleString()}` : 'Fee would be calculated at the time of checkout'}
+                {event.ticketPrice ? `PKR ${event.ticketPrice.toLocaleString()}` : 'Free'}
               </Text>
+              {event.totalTickets && (
+                <Text className="text-[#9CA3AF] text-xs mt-1">
+                  {event.totalTickets} tickets available
+                </Text>
+              )}
             </View>
           </View>
 
@@ -238,41 +257,59 @@ export default function EventDetailsScreen() {
         <View className="p-5 border-t border-[#1F1F1F]">
           <Text className="text-white text-xl font-bold mb-3">Event Description</Text>
           <Text className="text-[#D1D5DB] text-sm leading-6 mb-3">
-            {event.fullDescription || event.description}
+            {event.description}
           </Text>
-          
-          {event.entryPolicy && (
-            <>
-              <Text className="text-white text-base font-semibold mt-3 mb-2">Entry Policy:</Text>
-              <Text className="text-[#D1D5DB] text-sm leading-6">• {event.entryPolicy}</Text>
-            </>
-          )}
-          
-          <TouchableOpacity className="flex-row items-center mt-3">
-            <Text className="text-[#9333EA] text-sm font-semibold mr-1">View more</Text>
-            <MaterialIcons name="expand-more" size={16} color="#9333EA" />
-          </TouchableOpacity>
         </View>
 
+        {/* Contact Information */}
+        {(event.email || event.phone) && (
+          <View className="p-5 border-t border-[#1F1F1F]">
+            <Text className="text-white text-xl font-bold mb-3">Contact Information</Text>
+            {event.email && (
+              <View className="flex-row items-center mb-2">
+                <MaterialIcons name="email" size={20} color="#9CA3AF" style={{ marginRight: 12 }} />
+                <Text className="text-[#D1D5DB] text-sm">{event.email}</Text>
+              </View>
+            )}
+            {event.phone && (
+              <View className="flex-row items-center">
+                <MaterialIcons name="phone" size={20} color="#9CA3AF" style={{ marginRight: 12 }} />
+                <Text className="text-[#D1D5DB] text-sm">{event.phone}</Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Organized By */}
-        <View className="p-5 border-t border-[#1F1F1F]">
-          <Text className="text-white text-xl font-bold mb-3">Organized By</Text>
-          <Text className="text-white text-base font-semibold">{event.organizerName}</Text>
-        </View>
+        {event.createdBy && (
+          <View className="p-5 border-t border-[#1F1F1F]">
+            <Text className="text-white text-xl font-bold mb-3">Organized By</Text>
+            <Text className="text-white text-base font-semibold">{event.createdBy.fullName}</Text>
+            {event.createdBy.email && (
+              <Text className="text-[#9CA3AF] text-sm mt-1">{event.createdBy.email}</Text>
+            )}
+          </View>
+        )}
       </ScrollView>
 
       <Modal
         visible={showModal}
         onClose={() => {
           setShowModal(false);
-          router.push(`/ticket/${event.id}`);
+          if (event) {
+            const eventId = event._id || (event as any).id;
+            router.push(`/ticket/${eventId}`);
+          }
         }}
         title="Success"
         message={modalMessage}
         primaryButtonText="View Ticket"
         onPrimaryPress={() => {
           setShowModal(false);
-          router.push(`/ticket/${event.id}`);
+          if (event) {
+            const eventId = event._id || (event as any).id;
+            router.push(`/ticket/${eventId}`);
+          }
         }}
       />
     </View>
