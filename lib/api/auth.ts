@@ -17,6 +17,22 @@ export interface LoginResponse {
   message: string;
   otpRequired?: boolean;
   tempToken?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  user?: {
+    id: string;
+    fullName: string;
+    username?: string;
+    email: string;
+    authProvider?: string;
+    role?: string;
+    isVerified?: boolean;
+    createdEvents?: string[];
+    joinedEvents?: string[];
+    likedEvents?: string[];
+    createdAt?: string;
+    updatedAt?: string;
+  };
 }
 
 export interface VerifyOtpRequest {

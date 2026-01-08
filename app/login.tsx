@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
 import { authAPI } from '@/lib/api/auth';
-import { getAccessToken, getRefreshToken } from '@/lib/api/client';
+import { getAccessToken, getRefreshToken, setTokens } from '@/lib/api/client';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function LoginScreen() {
@@ -141,20 +141,35 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const response = await authAPI.login({ email, password });
-      if (response.success && response.tempToken) {
-        setLoginError('');
-        setTempToken(response.tempToken);
-        setOtpSent(true);
-        Alert.alert('OTP Sent', `OTP has been sent to ${email}. Please check your email.`);
+      if (response.success) {
+        // Check if user is verified (has accessToken) or needs OTP (has tempToken)
+        if (response.accessToken && response.refreshToken && response.user) {
+          // User is verified - save tokens, set user in store, and redirect
+          await setTokens(response.accessToken, response.refreshToken);
+          login(response.user);
+          router.replace('/(tabs)');
+          // Note: No need to set loading to false as we're redirecting
+        } else if (response.tempToken) {
+          // User is not verified - show OTP form
+          setLoginError('');
+          setTempToken(response.tempToken);
+          setOtpSent(true);
+          Alert.alert('OTP Sent', `OTP has been sent to ${email}. Please check your email.`);
+          setLoading(false);
+        } else {
+          // Show backend error message inline
+          setLoginError(response.message || 'Failed to send OTP');
+          setLoading(false);
+        }
       } else {
         // Show backend error message inline
         setLoginError(response.message || 'Failed to send OTP');
+        setLoading(false);
       }
     } catch (error: any) {
       // Extract error message from response
       const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to send OTP. Please try again.';
       setLoginError(errorMsg);
-    } finally {
       setLoading(false);
     }
   };
@@ -416,7 +431,9 @@ export default function LoginScreen() {
         <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: 'center', alignItems: 'center' }}>
           <View className="items-center mb-12">
             <Text className="text-4xl font-bold text-white mb-4">ticketly</Text>
-            <Text className="text-base text-[#9CA3AF] text-center">Enter the OTP sent to {email}</Text>
+            <Text className="text-base text-[#9CA3AF] text-center">
+              {email ? `Enter the OTP sent to ${email}` : 'Enter the OTP sent to your email'}
+            </Text>
           </View>
 
           <View className="w-full">
