@@ -8,9 +8,9 @@ const REFRESH_TOKEN_KEY = 'refreshToken';
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // Don't set default Content-Type here - let the interceptor handle it
+  // This prevents issues with FormData uploads
+  timeout: 60000, // 60 seconds timeout (file uploads can take longer)
 });
 
 // Request interceptor to add access token
@@ -20,6 +20,22 @@ apiClient.interceptors.request.use(
     if (accessToken && config.headers) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
+    
+    // Handle Content-Type based on request data type
+    if (config.data instanceof FormData) {
+      // For FormData, remove Content-Type completely - let axios/browser set it with boundary
+      if (config.headers) {
+        delete config.headers['Content-Type'];
+        delete config.headers['content-type'];
+      }
+    } else if (config.headers) {
+      // For non-FormData requests, set Content-Type to application/json
+      // Only if it's not already set and if there's data to send
+      if (config.data && !config.headers['Content-Type'] && !config.headers['content-type']) {
+        config.headers['Content-Type'] = 'application/json';
+      }
+    }
+    
     return config;
   },
   (error: AxiosError) => {
