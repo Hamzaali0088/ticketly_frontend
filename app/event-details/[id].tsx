@@ -7,10 +7,12 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
 import { eventsAPI, type Event } from '@/lib/api/events';
+import { ticketsAPI } from '@/lib/api/tickets';
 import { Modal } from '@/components/Modal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
@@ -28,6 +30,10 @@ export default function EventDetailsScreen() {
   const [isRegistered, setIsRegistered] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
+  const [creatingTicket, setCreatingTicket] = useState(false);
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [phoneInput, setPhoneInput] = useState('');
+  const [userTicketId, setUserTicketId] = useState<string | null>(null);
 
   // Fetch event from API
   useEffect(() => {
@@ -118,7 +124,7 @@ export default function EventDetailsScreen() {
     }
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     const isAuthenticated = useAppStore.getState().isAuthenticated;
     if (!isAuthenticated) {
       Alert.alert('Login Required', 'Please login to register for events', [
@@ -130,24 +136,65 @@ export default function EventDetailsScreen() {
     if (!user || !event) return;
 
     const eventId = event._id || (event as any).id;
-    const userId = (user as any)._id || user.id;
 
-    if (isRegistered) {
-      Alert.alert('Already Registered', 'You are already registered for this event');
-      router.push(`/ticket/${eventId}`);
+    // Check if user has phone number
+    if (!user.phone || user.phone.trim() === '') {
+      setShowPhoneModal(true);
       return;
     }
 
-    registerForEvent(eventId, userId);
-    setIsRegistered(true);
-    setModalMessage('Successfully registered for the event!');
-    setShowModal(true);
+    await createTicket(eventId, user.phone);
+  };
+
+  const createTicket = async (eventId: string, phone: string) => {
+    if (!user || !event) return;
+
+    try {
+      setCreatingTicket(true);
+      
+      const ticketData = {
+        eventId,
+        username: user.username || user.fullName,
+        email: user.email,
+        phone: phone.trim(),
+      };
+
+      const response = await ticketsAPI.createTicket(ticketData);
+      
+      if (response.success && response.ticket) {
+        setUserTicketId(response.ticket.id);
+        setIsRegistered(true);
+        setModalMessage('Ticket created successfully! Please submit payment to confirm your ticket.');
+        setShowModal(true);
+      }
+    } catch (error: any) {
+      console.error('Error creating ticket:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to create ticket';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setCreatingTicket(false);
+      setShowPhoneModal(false);
+      setPhoneInput('');
+    }
+  };
+
+  const handlePhoneSubmit = () => {
+    if (!phoneInput.trim() || phoneInput.trim().length < 10) {
+      Alert.alert('Invalid Phone', 'Please enter a valid phone number (at least 10 digits)');
+      return;
+    }
+    if (!event) return;
+    const eventId = event._id || (event as any).id;
+    createTicket(eventId, phoneInput);
   };
 
   const handleViewTicket = () => {
-    if (!event) return;
-    const eventId = event._id || (event as any).id;
-    router.push(`/ticket/${eventId}`);
+    if (userTicketId) {
+      router.push(`/ticket/${userTicketId}`);
+    } else if (event) {
+      const eventId = event._id || (event as any).id;
+      router.push(`/ticket/${eventId}`);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -246,10 +293,15 @@ export default function EventDetailsScreen() {
           <TouchableOpacity
             className={`py-4 rounded-xl items-center mt-2 ${isRegistered ? 'bg-[#10B981]' : 'bg-[#9333EA]'}`}
             onPress={isRegistered ? handleViewTicket : handleRegister}
+            disabled={creatingTicket}
           >
-            <Text className="text-white text-base font-bold">
-              {isRegistered ? 'View Ticket' : 'Register Now'}
-            </Text>
+            {creatingTicket ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text className="text-white text-base font-bold">
+                {isRegistered ? 'View Ticket' : 'Register Now'}
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -296,7 +348,9 @@ export default function EventDetailsScreen() {
         visible={showModal}
         onClose={() => {
           setShowModal(false);
-          if (event) {
+          if (userTicketId) {
+            router.push(`/ticket/${userTicketId}`);
+          } else if (event) {
             const eventId = event._id || (event as any).id;
             router.push(`/ticket/${eventId}`);
           }
@@ -306,12 +360,57 @@ export default function EventDetailsScreen() {
         primaryButtonText="View Ticket"
         onPrimaryPress={() => {
           setShowModal(false);
-          if (event) {
+          if (userTicketId) {
+            router.push(`/ticket/${userTicketId}`);
+          } else if (event) {
             const eventId = event._id || (event as any).id;
             router.push(`/ticket/${eventId}`);
           }
         }}
       />
+
+      {/* Phone Number Modal */}
+      {showPhoneModal && (
+        <View className="absolute inset-0 bg-black/70 justify-center items-center p-5 z-50">
+          <View className="bg-[#1F1F1F] rounded-2xl p-6 w-full max-w-[400px]">
+            <Text className="text-white text-xl font-bold mb-2 text-center">Phone Number Required</Text>
+            <Text className="text-[#D1D5DB] text-base leading-6 mb-4 text-center">
+              Please enter your phone number to create a ticket
+            </Text>
+            <TextInput
+              className="bg-[#374151] text-white px-4 py-3 rounded-xl mb-4"
+              placeholder="Enter your phone number"
+              placeholderTextColor="#9CA3AF"
+              value={phoneInput}
+              onChangeText={setPhoneInput}
+              keyboardType="phone-pad"
+              autoFocus
+            />
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                className="flex-1 py-3.5 rounded-xl items-center bg-[#2F2F2F]"
+                onPress={() => {
+                  setShowPhoneModal(false);
+                  setPhoneInput('');
+                }}
+              >
+                <Text className="text-white text-base font-semibold">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-1 py-3.5 rounded-xl items-center bg-[#9333EA]"
+                onPress={handlePhoneSubmit}
+                disabled={creatingTicket}
+              >
+                {creatingTicket ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text className="text-white text-base font-semibold">Submit</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
