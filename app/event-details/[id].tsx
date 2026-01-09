@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
 import { eventsAPI, type Event } from '@/lib/api/events';
 import { ticketsAPI } from '@/lib/api/tickets';
+import { authAPI } from '@/lib/api/auth';
 import { Modal } from '@/components/Modal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
@@ -20,9 +21,10 @@ export default function EventDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useAppStore((state) => state.user);
+  const setUser = useAppStore((state) => state.setUser);
   const toggleEventLike = useAppStore((state) => state.toggleEventLike);
   const registerForEvent = useAppStore((state) => state.registerForEvent);
-  
+
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +36,10 @@ export default function EventDetailsScreen() {
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [phoneInput, setPhoneInput] = useState('');
   const [userTicketId, setUserTicketId] = useState<string | null>(null);
+  const [userTickets, setUserTickets] = useState<any[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [ticketsSectionY, setTicketsSectionY] = useState<number>(0);
 
   // Fetch event from API
   useEffect(() => {
@@ -48,12 +54,13 @@ export default function EventDetailsScreen() {
         setLoading(true);
         setError(null);
         const response = await eventsAPI.getEventById(id);
-        
+
         if (response.success && response.event) {
           // Transform backend event to match frontend structure
+          const eventData = response.event as any;
           const transformedEvent: Event = {
-            ...response.event,
-            _id: response.event.id || response.event._id,
+            ...eventData,
+            _id: eventData.id || eventData._id,
           };
           setEvent(transformedEvent);
         } else {
@@ -71,14 +78,32 @@ export default function EventDetailsScreen() {
     fetchEvent();
   }, [id]);
 
+  // Fetch user's tickets for this event
   useEffect(() => {
-    if (event && user) {
-      const userId = (user as any)._id || user.id;
-      // Note: Backend event doesn't have likedUsers/registeredUsers, 
-      // so we'll need to check from store or make separate API calls
-      // For now, we'll keep the state management but it may need adjustment
-    }
-  }, [event, user]);
+    const fetchUserTickets = async () => {
+      if (!event || !user || !id) return;
+
+      try {
+        setLoadingTickets(true);
+        const response = await ticketsAPI.getMyTickets();
+        if (response.success && response.tickets) {
+          // Filter tickets for this specific event
+          const eventTickets = response.tickets.filter(
+            (ticket: any) => ticket.event?._id === id || ticket.event?.id === id || ticket.eventId === id
+          );
+          setUserTickets(eventTickets);
+          // Check if user is registered (has tickets)
+          setIsRegistered(eventTickets.length > 0);
+        }
+      } catch (error) {
+        console.error('Error fetching user tickets:', error);
+      } finally {
+        setLoadingTickets(false);
+      }
+    };
+
+    fetchUserTickets();
+  }, [event, user, id]);
 
   if (loading) {
     return (
@@ -151,7 +176,7 @@ export default function EventDetailsScreen() {
 
     try {
       setCreatingTicket(true);
-      
+
       const ticketData = {
         eventId,
         username: user.username || user.fullName,
@@ -160,8 +185,32 @@ export default function EventDetailsScreen() {
       };
 
       const response = await ticketsAPI.createTicket(ticketData);
-      
+
       if (response.success && response.ticket) {
+        // Refresh user profile to update joinedEvents
+        try {
+          const profileResponse = await authAPI.getProfile();
+          if (profileResponse.success && profileResponse.user) {
+            setUser(profileResponse.user);
+          }
+        } catch (profileError) {
+          console.error('Failed to refresh profile:', profileError);
+          // Don't block success if profile refresh fails
+        }
+
+        // Refresh tickets list
+        try {
+          const ticketsResponse = await ticketsAPI.getMyTickets();
+          if (ticketsResponse.success && ticketsResponse.tickets) {
+            const eventTickets = ticketsResponse.tickets.filter(
+              (ticket: any) => ticket.event?._id === id || ticket.event?.id === id || ticket.eventId === id
+            );
+            setUserTickets(eventTickets);
+          }
+        } catch (ticketsError) {
+          console.error('Failed to refresh tickets:', ticketsError);
+        }
+
         setUserTicketId(response.ticket.id);
         setIsRegistered(true);
         setModalMessage('Ticket created successfully! Please submit payment to confirm your ticket.');
@@ -189,11 +238,14 @@ export default function EventDetailsScreen() {
   };
 
   const handleViewTicket = () => {
-    if (userTicketId) {
-      router.push(`/ticket/${userTicketId}`);
-    } else if (event) {
-      const eventId = event._id || (event as any).id;
-      router.push(`/ticket/${eventId}`);
+    // Always scroll to tickets section
+    if (ticketsSectionY > 0) {
+      scrollViewRef.current?.scrollTo({ y: ticketsSectionY - 20, animated: true });
+    } else {
+      // Fallback: scroll to end if position not measured yet
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     }
   };
 
@@ -213,6 +265,7 @@ export default function EventDetailsScreen() {
   return (
     <View className="flex-1 bg-[#0F0F0F]">
       <ScrollView
+        ref={scrollViewRef}
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
@@ -234,10 +287,10 @@ export default function EventDetailsScreen() {
             className="absolute top-[50px] right-5 bg-black/50 w-10 h-10 rounded-full items-center justify-center"
             onPress={handleLike}
           >
-            <MaterialIcons 
-              name={isLiked ? "favorite" : "favorite-border"} 
-              size={20} 
-              color={isLiked ? "#EF4444" : "#FFFFFF"} 
+            <MaterialIcons
+              name={isLiked ? "favorite" : "favorite-border"}
+              size={20}
+              color={isLiked ? "#EF4444" : "#FFFFFF"}
             />
           </TouchableOpacity>
         </View>
@@ -290,19 +343,22 @@ export default function EventDetailsScreen() {
           </View>
 
           {/* Register Button */}
-          <TouchableOpacity
-            className={`py-4 rounded-xl items-center mt-2 ${isRegistered ? 'bg-[#10B981]' : 'bg-[#9333EA]'}`}
-            onPress={isRegistered ? handleViewTicket : handleRegister}
-            disabled={creatingTicket}
-          >
-            {creatingTicket ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text className="text-white text-base font-bold">
-                {isRegistered ? 'View Ticket' : 'Register Now'}
-              </Text>
-            )}
-          </TouchableOpacity>
+          {!isRegistered && (
+            <TouchableOpacity
+              className={`py-4 rounded-xl items-center mt-2 ${isRegistered ? 'bg-[#10B981]' : 'bg-[#9333EA]'}`}
+              onPress={isRegistered ? handleViewTicket : handleRegister}
+              disabled={creatingTicket}
+            >
+              {creatingTicket ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text className="text-white text-base font-bold">
+                  Register Now
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+
         </View>
 
         {/* Event Description Section */}
@@ -340,6 +396,155 @@ export default function EventDetailsScreen() {
             {event.createdBy.email && (
               <Text className="text-[#9CA3AF] text-sm mt-1">{event.createdBy.email}</Text>
             )}
+          </View>
+        )}
+
+        {/* User's Tickets Section */}
+        {user && userTickets.length > 0 && (
+          <View
+            className="p-5 border-t border-[#1F1F1F]"
+            onLayout={(event) => {
+              const { y } = event.nativeEvent.layout;
+              setTicketsSectionY(y);
+            }}
+          >
+            <Text className="text-white text-xl font-bold mb-4">Your Tickets ({userTickets.length})</Text>
+            {userTickets.map((ticket: any, ticketIndex: number) => {
+              // Get status colors and info
+              const getStatusInfo = (status: string) => {
+                switch (status) {
+                  case 'confirmed':
+                    return {
+                      bgColor: 'bg-[#10B981]/20',
+                      borderColor: 'border-[#10B981]/50',
+                      badgeColor: 'bg-[#10B981]',
+                      textColor: 'text-[#10B981]',
+                      iconColor: '#10B981',
+                      icon: 'check-circle',
+                      label: 'Confirmed'
+                    };
+                  case 'pending_payment':
+                    return {
+                      bgColor: 'bg-[#F59E0B]/20',
+                      borderColor: 'border-[#F59E0B]/50',
+                      badgeColor: 'bg-[#F59E0B]',
+                      textColor: 'text-[#F59E0B]',
+                      iconColor: '#F59E0B',
+                      icon: 'schedule',
+                      label: 'Pending Payment'
+                    };
+                  case 'payment_submitted':
+                    return {
+                      bgColor: 'bg-[#3B82F6]/20',
+                      borderColor: 'border-[#3B82F6]/50',
+                      badgeColor: 'bg-[#3B82F6]',
+                      textColor: 'text-[#3B82F6]',
+                      iconColor: '#3B82F6',
+                      icon: 'hourglass-empty',
+                      label: 'Payment Submitted'
+                    };
+                  case 'used':
+                    return {
+                      bgColor: 'bg-[#6B7280]/20',
+                      borderColor: 'border-[#6B7280]/50',
+                      badgeColor: 'bg-[#6B7280]',
+                      textColor: 'text-[#6B7280]',
+                      iconColor: '#6B7280',
+                      icon: 'check',
+                      label: 'Used'
+                    };
+                  case 'cancelled':
+                    return {
+                      bgColor: 'bg-[#EF4444]/20',
+                      borderColor: 'border-[#EF4444]/50',
+                      badgeColor: 'bg-[#EF4444]',
+                      textColor: 'text-[#EF4444]',
+                      iconColor: '#EF4444',
+                      icon: 'cancel',
+                      label: 'Cancelled'
+                    };
+                  default:
+                    return {
+                      bgColor: 'bg-[#9CA3AF]/20',
+                      borderColor: 'border-[#9CA3AF]/50',
+                      badgeColor: 'bg-[#9CA3AF]',
+                      textColor: 'text-[#9CA3AF]',
+                      iconColor: '#9CA3AF',
+                      icon: 'help-outline',
+                      label: status
+                    };
+                }
+              };
+
+              const statusInfo = getStatusInfo(ticket.status);
+              const ticketId = ticket.id || ticket._id || `ticket-${ticketIndex}`;
+
+              return (
+                <TouchableOpacity
+                  key={ticketId}
+                  className={`${statusInfo.bgColor} ${statusInfo.borderColor} rounded-xl p-4 mb-3 border-2`}
+                  onPress={() => router.push(`/ticket/${ticketId}`)}
+                  activeOpacity={0.7}
+                >
+                  <View className="flex-row items-start justify-between">
+                    <View className="flex-1 mr-3">
+                      {/* Ticket Header with Status */}
+                      <View className="flex-row items-center justify-between mb-3">
+                        <View className="flex-row items-center flex-1">
+                          <MaterialIcons
+                            name={statusInfo.icon as any}
+                            size={20}
+                            color={statusInfo.iconColor}
+                            style={{ marginRight: 8 }}
+                          />
+                          <Text className="text-white text-sm font-bold">
+                            Ticket #{ticketId.slice(-8).toUpperCase()}
+                          </Text>
+                        </View>
+                        <View className={`${statusInfo.badgeColor} px-3 py-1 rounded-full`}>
+                          <Text className="text-white text-[10px] font-bold uppercase">
+                            {statusInfo.label}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Ticket Details */}
+                      <View>
+                        <View className="flex-row items-center mb-2">
+                          <MaterialIcons name="email" size={14} color="#9CA3AF" style={{ marginRight: 8 }} />
+                          <Text className="text-[#D1D5DB] text-xs flex-1" numberOfLines={1}>
+                            {ticket.email}
+                          </Text>
+                        </View>
+                        <View className="flex-row items-center mb-2">
+                          <MaterialIcons name="phone" size={14} color="#9CA3AF" style={{ marginRight: 8 }} />
+                          <Text className="text-[#D1D5DB] text-xs">
+                            {ticket.phone}
+                          </Text>
+                        </View>
+                        {ticket.createdAt && (
+                          <View className="flex-row items-center">
+                            <MaterialIcons name="calendar-today" size={14} color="#9CA3AF" style={{ marginRight: 8 }} />
+                            <Text className="text-[#9CA3AF] text-[10px]">
+                              {new Date(ticket.createdAt).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+
+                    {/* Arrow Icon */}
+                    <View className="justify-center">
+                      <MaterialIcons name="chevron-right" size={24} color="#9CA3AF" />
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
       </ScrollView>

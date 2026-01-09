@@ -174,11 +174,11 @@ export default function TicketScreen() {
 
         {/* Event Image */}
         {ticket.event?.image && (
-          <Image
+        <Image
             source={{ uri: ticket.event.image }}
             className="w-full h-[200px] mt-3"
-            resizeMode="cover"
-          />
+          resizeMode="cover"
+        />
         )}
 
         {/* Event Info */}
@@ -191,22 +191,22 @@ export default function TicketScreen() {
           )}
 
           {ticket.event?.date && (
-            <View className="flex-row mb-4 items-start">
-              <MaterialIcons name="calendar-today" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
-              <View className="flex-1">
-                <Text className="text-[#9CA3AF] text-xs mb-1">Date</Text>
-                <Text className="text-white text-sm mb-0.5">
+          <View className="flex-row mb-4 items-start">
+            <MaterialIcons name="calendar-today" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+            <View className="flex-1">
+              <Text className="text-[#9CA3AF] text-xs mb-1">Date</Text>
+              <Text className="text-white text-sm mb-0.5">
                   {formatDate(ticket.event.date)} {ticket.event.time && `at ${ticket.event.time}`}
-                </Text>
-              </View>
+              </Text>
             </View>
+          </View>
           )}
 
           {ticket.event?.location && (
-            <View className="flex-row mb-4 items-start">
-              <MaterialIcons name="location-on" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
-              <View className="flex-1">
-                <Text className="text-[#9CA3AF] text-xs mb-1">Venue</Text>
+          <View className="flex-row mb-4 items-start">
+            <MaterialIcons name="location-on" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+            <View className="flex-1">
+              <Text className="text-[#9CA3AF] text-xs mb-1">Venue</Text>
                 <Text className="text-white text-sm mb-0.5">{ticket.event.location}</Text>
               </View>
             </View>
@@ -220,8 +220,8 @@ export default function TicketScreen() {
                 <Text className="text-white text-sm mb-0.5">
                   PKR {ticket.event.ticketPrice.toLocaleString()}
                 </Text>
-              </View>
             </View>
+          </View>
           )}
 
           <View className="flex-row mb-4 items-start">
@@ -239,8 +239,8 @@ export default function TicketScreen() {
 
         {/* QR Code Section */}
         {ticket.status === 'confirmed' && (
-          <View className="p-5 border-t border-[#374151] items-center">
-            <Text className="text-white text-base font-semibold mb-4">Scan QR Code at Entry</Text>
+        <View className="p-5 border-t border-[#374151] items-center">
+          <Text className="text-white text-base font-semibold mb-4">Scan QR Code at Entry</Text>
             {ticket.qrCodeUrl ? (
               <View className="bg-white p-5 rounded-xl mb-3">
                 <Image
@@ -250,19 +250,19 @@ export default function TicketScreen() {
                 />
               </View>
             ) : ticket.accessKey ? (
-              <View className="bg-white p-5 rounded-xl mb-3">
-                <View className="w-[200px] h-[200px] bg-[#F3F4F6] items-center justify-center rounded-lg">
+          <View className="bg-white p-5 rounded-xl mb-3">
+            <View className="w-[200px] h-[200px] bg-[#F3F4F6] items-center justify-center rounded-lg">
                   <Text className="text-[#6B7280] text-base font-bold mb-2">Access Key</Text>
                   <Text className="text-[#9CA3AF] text-[10px] text-center px-2.5 font-mono">
                     {ticket.accessKey}
                   </Text>
-                </View>
-              </View>
-            ) : null}
-            <Text className="text-[#9CA3AF] text-xs text-center">
-              Please arrive 15 minutes before the event starts
-            </Text>
+            </View>
           </View>
+            ) : null}
+          <Text className="text-[#9CA3AF] text-xs text-center">
+            Please arrive 15 minutes before the event starts
+          </Text>
+        </View>
         )}
 
         {ticket.status === 'pending_payment' && (
@@ -289,24 +289,24 @@ export default function TicketScreen() {
 
       {/* Actions */}
       {ticket.status === 'confirmed' && (
-        <View className="flex-row gap-3 px-5">
-          <TouchableOpacity
-            className="flex-1 bg-[#9333EA] py-4 rounded-xl items-center"
-            onPress={() => {
+      <View className="flex-row gap-3 px-5">
+        <TouchableOpacity
+          className="flex-1 bg-[#9333EA] py-4 rounded-xl items-center"
+          onPress={() => {
               Alert.alert('Download', 'Ticket download feature coming soon!');
-            }}
-          >
-            <Text className="text-white text-base font-semibold">Download Ticket</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="flex-1 bg-[#1F1F1F] border border-[#374151] py-4 rounded-xl items-center"
-            onPress={() => {
+          }}
+        >
+          <Text className="text-white text-base font-semibold">Download Ticket</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          className="flex-1 bg-[#1F1F1F] border border-[#374151] py-4 rounded-xl items-center"
+          onPress={() => {
               Alert.alert('Share', 'Ticket sharing feature coming soon!');
-            }}
-          >
-            <Text className="text-white text-base font-semibold">Share</Text>
-          </TouchableOpacity>
-        </View>
+          }}
+        >
+          <Text className="text-white text-base font-semibold">Share</Text>
+        </TouchableOpacity>
+      </View>
       )}
     </ScrollView>
   );

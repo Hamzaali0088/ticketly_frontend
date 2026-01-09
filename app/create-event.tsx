@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
 import { eventsAPI } from '@/lib/api/events';
+import { authAPI } from '@/lib/api/auth';
 import { Modal } from '@/components/Modal';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -39,10 +40,12 @@ interface EventFormData {
 export default function CreateEventScreen() {
   const router = useRouter();
   const user = useAppStore((state) => state.user);
+  const setUser = useAppStore((state) => state.setUser);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [createdEventId, setCreatedEventId] = useState<string | null>(null);
   const [formData, setFormData] = useState<EventFormData>({
     name: user?.fullName || '',
     email: user?.email || '',
@@ -186,6 +189,28 @@ export default function CreateEventScreen() {
       });
 
       if (response.success) {
+        // Get the event ID from the response (try both id and _id)
+        const eventId = response.event?.id || (response.event as any)?._id;
+
+        if (eventId) {
+          // Store the event ID for navigation
+          console.log('✅ Event created successfully with ID:', eventId);
+          setCreatedEventId(String(eventId));
+        } else {
+          console.warn('⚠️ Event created but ID not found in response:', response);
+        }
+
+        // Refresh user profile to update createdEvents
+        try {
+          const profileResponse = await authAPI.getProfile();
+          if (profileResponse.success && profileResponse.user) {
+            setUser(profileResponse.user);
+          }
+        } catch (profileError) {
+          console.error('Failed to refresh profile:', profileError);
+          // Don't block success if profile refresh fails
+        }
+
         setShowSuccessModal(true);
       } else {
         Alert.alert('Error', response.message || 'Failed to create event');
@@ -199,7 +224,15 @@ export default function CreateEventScreen() {
 
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
-    router.back();
+    // Navigate to the created event details page if we have an event ID
+    if (createdEventId) {
+      console.log('📍 Navigating to event details with ID:', createdEventId);
+      router.push(`/created-event-details/${createdEventId}`);
+    } else {
+      // Fallback: go back if event ID is not available
+      console.warn('⚠️ No event ID available, navigating back');
+      router.back();
+    }
   };
 
   return (

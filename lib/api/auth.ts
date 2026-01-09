@@ -67,15 +67,57 @@ export interface RefreshTokenResponse {
   refreshToken: string;
 }
 
+export interface JoinedEvent {
+  event: {
+    id: string;
+    title: string;
+    description: string;
+    date: string;
+    time: string;
+    location: string;
+    image?: string;
+    email: string;
+    phone: string;
+    ticketPrice: number;
+    totalTickets: number;
+    status: string;
+    createdBy?: {
+      _id: string;
+      fullName: string;
+      username?: string;
+      email: string;
+    };
+    createdAt: string;
+    updatedAt: string;
+  };
+  tickets: Array<{
+    id: string;
+    eventId: string;
+    username: string;
+    email: string;
+    phone: string;
+    status: string;
+    accessKey?: string;
+    qrCodeUrl?: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+}
+
 export interface UserProfile {
   _id: string;
+  id?: string;
   fullName: string;
   email: string;
   username?: string;
   phone?: string;
   companyName?: string;
   role?: string;
+  createdEvents?: any[];
+  joinedEvents?: string[] | JoinedEvent[]; // Can be IDs (from login) or full objects (from profile)
+  likedEvents?: any[];
   createdAt?: string;
+  updatedAt?: string;
 }
 
 // Auth API functions

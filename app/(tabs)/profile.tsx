@@ -5,15 +5,17 @@ import { eventsAPI } from '@/lib/api/events';
 import { useAppStore } from '@/store/useAppStore';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   Alert,
   ScrollView,
   Text,
   TouchableOpacity,
-  View
+  View,
+  RefreshControl,
+  Image
 } from 'react-native';
 
 // Token storage keys (must match client.ts)
@@ -21,23 +23,32 @@ const ACCESS_TOKEN_KEY = 'accessToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
 
 // Helper function to convert API event to app event format
-const convertEvent = (apiEvent: Event) => ({
-  id: apiEvent._id,
-  title: apiEvent.title,
-  description: apiEvent.description,
-  date: apiEvent.date,
-  time: apiEvent.time,
-  venue: apiEvent.location,
-  city: apiEvent.location.split(',')[0] || apiEvent.location,
-  category: 'Event',
-  image: apiEvent.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
-  organizerId: apiEvent.createdBy?._id || '',
-  organizerName: apiEvent.createdBy?.fullName || 'Organizer',
-  price: apiEvent.ticketPrice,
-  accessType: apiEvent.ticketPrice > 0 ? 'paid' as const : 'open' as const,
-  registeredUsers: [],
-  likedUsers: [],
-});
+const convertEvent = (apiEvent: any) => {
+  // Handle both _id and id fields (backend may return either)
+  const eventId = apiEvent._id || apiEvent.id || (apiEvent as any)?._id || (apiEvent as any)?.id;
+
+  if (!eventId) {
+    console.warn('⚠️ Event missing ID:', apiEvent);
+  }
+
+  return {
+    id: eventId || '',
+    title: apiEvent.title || '',
+    description: apiEvent.description || '',
+    date: apiEvent.date || '',
+    time: apiEvent.time || '',
+    venue: apiEvent.location || '',
+    city: (apiEvent.location || '').split(',')[0] || apiEvent.location || '',
+    category: 'Event',
+    image: apiEvent.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
+    organizerId: apiEvent.createdBy?._id || apiEvent.createdBy?.id || '',
+    organizerName: apiEvent.createdBy?.fullName || 'Organizer',
+    price: apiEvent.ticketPrice || 0,
+    accessType: (apiEvent.ticketPrice || 0) > 0 ? 'paid' as const : 'open' as const,
+    registeredUsers: [],
+    likedUsers: [],
+  };
+};
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -46,12 +57,16 @@ export default function ProfileScreen() {
   const setUser = useAppStore((state) => state.setUser);
   const [activeTab, setActiveTab] = useState<'created' | 'joined' | 'liked'>('created');
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [myEvents, setMyEvents] = useState<any[]>([]);
+  const [joinedEvents, setJoinedEvents] = useState<any[]>([]);
+  const [joinedEventsData, setJoinedEventsData] = useState<any[]>([]); // Store full data with tickets
+  const [likedEvents, setLikedEvents] = useState<any[]>([]);
   const hasLoadedRef = useRef(false);
   const currentUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Only load if user exists and we haven't loaded for this user ID yet
+    // Load immediately when user is available
     if (user?._id) {
       // If user ID changed, reset the loaded flag
       if (currentUserIdRef.current !== user._id) {
@@ -59,42 +74,151 @@ export default function ProfileScreen() {
         hasLoadedRef.current = false;
       }
 
-      // Load data only once per user
+      // Check if user has full event data (objects) or just IDs (strings) or empty arrays
+      const createdEventsIsStrings = user.createdEvents && Array.isArray(user.createdEvents) && user.createdEvents.length > 0 && typeof user.createdEvents[0] === 'string';
+      const joinedEventsIsStrings = user.joinedEvents && Array.isArray(user.joinedEvents) && user.joinedEvents.length > 0 && typeof user.joinedEvents[0] === 'string';
+      const hasFullEventData = user.createdEvents && Array.isArray(user.createdEvents) && user.createdEvents.length > 0 && typeof user.createdEvents[0] === 'object';
+      const hasFullJoinedData = user.joinedEvents && Array.isArray(user.joinedEvents) && user.joinedEvents.length > 0 && typeof user.joinedEvents[0] === 'object' && (user.joinedEvents[0] as any).event;
+
+      // Always load profile if:
+      // 1. We haven't loaded yet for this user (always load on first mount), OR
+      // 2. User has only IDs (strings) instead of full objects, OR
+      // 3. User doesn't have full event data (empty arrays or undefined)
+      const needsFullData = !hasFullEventData || !hasFullJoinedData || createdEventsIsStrings || joinedEventsIsStrings;
+
+      // Always load on first mount, or if we need full data
       if (!hasLoadedRef.current) {
         hasLoadedRef.current = true;
-        loadMyEvents();
-        // Skip loadProfile to avoid loop - user data is already in store from login
-        // loadProfile();
+        loadProfile();
+      } else if (needsFullData) {
+        // Reload if we don't have full data
+        loadProfile();
       }
     }
-  }, [user?._id]); // Only depend on user ID, not the entire user object
+  }, [user?._id]); // Only depend on user ID, but check data inside effect
 
-  const loadProfile = async () => {
+  // Refresh profile when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (user?._id) {
+        // Check if user has full event data (objects) or just IDs (strings) or empty
+        const createdEventsIsStrings = user.createdEvents && Array.isArray(user.createdEvents) && user.createdEvents.length > 0 && typeof user.createdEvents[0] === 'string';
+        const joinedEventsIsStrings = user.joinedEvents && Array.isArray(user.joinedEvents) && user.joinedEvents.length > 0 && typeof user.joinedEvents[0] === 'string';
+        const hasFullEventData = user.createdEvents && Array.isArray(user.createdEvents) && user.createdEvents.length > 0 && typeof user.createdEvents[0] === 'object';
+        const hasFullJoinedData = user.joinedEvents && Array.isArray(user.joinedEvents) && user.joinedEvents.length > 0 && typeof user.joinedEvents[0] === 'object' && (user.joinedEvents[0] as any).event;
+
+        // Always load profile if user has only IDs or doesn't have full data
+        if (createdEventsIsStrings || joinedEventsIsStrings || !hasFullEventData || !hasFullJoinedData) {
+          loadProfile(true);
+        }
+      }
+    }, [user?._id])
+  );
+
+  const loadProfile = async (showRefreshing = false) => {
     try {
+      if (showRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
       const response = await authAPI.getProfile();
       if (response.success && response.user) {
-        // Only update if user ID is different (prevents loop)
-        if (user?._id !== response.user._id) {
-          setUser(response.user);
+        setUser(response.user);
+
+        // Extract created events from the response
+        if (response.user.createdEvents && Array.isArray(response.user.createdEvents) && response.user.createdEvents.length > 0) {
+          // Check if it's an array of objects (full events) or strings (IDs)
+          const firstItem = response.user.createdEvents[0];
+          if (typeof firstItem === 'object' && firstItem !== null) {
+            // Full event objects - map them directly
+            const created = response.user.createdEvents.map((event: any) => convertEvent(event));
+            setMyEvents(created);
+          } else {
+            // Just IDs - load from events API
+            await loadMyEvents(false);
+          }
+        } else {
+          // No created events or empty array - try loading from API
+          await loadMyEvents(false);
+        }
+
+        // Extract joined events and liked events from the response
+        if (response.user.joinedEvents && Array.isArray(response.user.joinedEvents) && response.user.joinedEvents.length > 0) {
+          // Check if it's an array of objects (full joined events with tickets) or strings (IDs)
+          const firstItem = response.user.joinedEvents[0];
+          if (typeof firstItem === 'object' && firstItem !== null && firstItem.event) {
+            // Full joined event objects with tickets - store them
+            setJoinedEventsData(response.user.joinedEvents);
+
+            // Also store converted events for display
+            const joined = response.user.joinedEvents.map((item: any) => {
+              if (item.event) {
+                return convertEvent(item.event);
+              }
+              return null;
+            }).filter(Boolean);
+            setJoinedEvents(joined);
+          } else {
+            // Just IDs - clear for now (will be loaded when user navigates to profile)
+            setJoinedEventsData([]);
+            setJoinedEvents([]);
+          }
+        } else {
+          setJoinedEventsData([]);
+          setJoinedEvents([]);
+        }
+
+        if (response.user.likedEvents && Array.isArray(response.user.likedEvents) && response.user.likedEvents.length > 0) {
+          // Check if it's an array of objects or strings
+          const firstItem = response.user.likedEvents[0];
+          if (typeof firstItem === 'object' && firstItem !== null) {
+            // Full event objects
+            const liked = response.user.likedEvents.map((event: any) => convertEvent(event));
+            setLikedEvents(liked);
+          } else {
+            // Just IDs - clear for now
+            setLikedEvents([]);
+          }
+        } else {
+          setLikedEvents([]);
         }
       }
     } catch (error: any) {
       console.error('Failed to load profile:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to load profile');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const loadMyEvents = async () => {
+  const onRefresh = () => {
+    hasLoadedRef.current = false;
+    loadProfile(true);
+  };
+
+  const loadMyEvents = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       const response = await eventsAPI.getMyEvents();
       if (response.success && response.events) {
         const convertedEvents = response.events.map(convertEvent);
         setMyEvents(convertedEvents);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to load events');
+      console.error('Failed to load events:', error);
+      // Don't show alert if called from loadProfile to avoid double alerts
+      if (showLoading) {
+        Alert.alert('Error', error.response?.data?.message || 'Failed to load events');
+      }
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -124,10 +248,8 @@ export default function ProfileScreen() {
     );
   }
 
-  // Filter events based on user's actions
-  const createdEvents = myEvents.filter((event) => event.organizerId === user?._id);
-  const joinedEvents: any[] = []; // Will be implemented when ticket/registration API is available
-  const likedEvents: any[] = []; // Will be implemented when like API is available
+  // Use myEvents directly as created events (they're already filtered by the API)
+  const createdEvents = myEvents;
 
   const handleLogout = async () => {
     console.log('🔴 Logout button clicked!');
@@ -250,12 +372,69 @@ export default function ProfileScreen() {
     }
   };
 
-  const renderEvents = () => {
-    let eventsToShow: any[] = [];
-    if (activeTab === 'created') eventsToShow = createdEvents;
-    else if (activeTab === 'joined') eventsToShow = joinedEvents;
-    else eventsToShow = likedEvents;
+  const renderJoinedEvent = (joinedEventData: any, index: number) => {
+    const event = joinedEventData.event;
+    const tickets = joinedEventData.tickets || [];
 
+    // Handle both id and _id fields
+    const eventId = event?.id || event?._id || (event as any)?._id || (event as any)?.id;
+
+    if (!eventId) {
+      console.warn('⚠️ Joined event missing ID:', event);
+    }
+
+    const formatDate = (dateString: string) => {
+      const date = new Date(dateString);
+      const month = date.toLocaleString('default', { month: 'short' });
+      const day = date.getDate();
+      return { month, day };
+    };
+
+    const { month, day } = formatDate(event.date);
+
+    return (
+      <TouchableOpacity
+        className="bg-[#1F1F1F] rounded-xl overflow-hidden mb-4"
+        onPress={() => {
+          if (eventId) {
+            console.log('📍 Navigating to joined event details with ID:', eventId);
+            router.push(`/event-details/${eventId}`);
+          } else {
+            console.error('❌ Cannot navigate: event ID is missing');
+          }
+        }}
+        activeOpacity={0.8}
+      >
+        <View className="w-full h-[180px] relative">
+          <Image
+            source={{ uri: event.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800' }}
+            className="w-full h-full"
+            resizeMode="cover"
+          />
+          <View className="absolute top-2 right-2 bg-[#EF4444] rounded-lg py-1.5 px-2.5 items-center min-w-[50px]">
+            <Text className="text-white text-[10px] font-semibold uppercase">{month}</Text>
+            <Text className="text-white text-base font-bold">{day}</Text>
+          </View>
+          <View className="absolute top-2 left-2 bg-[#9333EA] rounded-lg py-1.5 px-2.5">
+            <Text className="text-white text-xs font-semibold">{tickets.length} Ticket{tickets.length !== 1 ? 's' : ''}</Text>
+          </View>
+        </View>
+        <View className="p-3">
+          <Text className="text-white text-base font-semibold mb-2" numberOfLines={2}>
+            {event.title}
+          </Text>
+          <View className="flex-row items-center">
+            <Text className="text-xs mr-1">📍</Text>
+            <Text className="text-[#9CA3AF] text-xs flex-1" numberOfLines={1}>
+              {event.location?.length > 30 ? `${event.location.substring(0, 30)}...` : event.location}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderEvents = () => {
     if (loading) {
       return (
         <View className="py-10 items-center">
@@ -264,23 +443,79 @@ export default function ProfileScreen() {
       );
     }
 
+    if (activeTab === 'joined') {
+      if (joinedEventsData.length === 0) {
+        return (
+          <TouchableOpacity
+            className="py-10 items-center"
+            onPress={onRefresh}
+            activeOpacity={0.7}
+          >
+            <Text className="text-[#6B7280] text-sm">No events joined yet</Text>
+          </TouchableOpacity>
+        );
+      }
+
+      return (
+        <View>
+          {joinedEventsData.map((joinedEventData, index) => {
+            const event = joinedEventData.event;
+            return (
+              <View key={event?.id || event?._id || `event-${index}`}>
+                {renderJoinedEvent(joinedEventData, index)}
+              </View>
+            );
+          })}
+        </View>
+      );
+    }
+
+    let eventsToShow: any[] = [];
+    if (activeTab === 'created') eventsToShow = createdEvents;
+    else eventsToShow = likedEvents;
+
     if (eventsToShow.length === 0) {
       return (
-        <View className="py-10 items-center">
+        <TouchableOpacity
+          className="py-10 items-center"
+          onPress={onRefresh}
+          activeOpacity={0.7}
+        >
           <Text className="text-[#6B7280] text-sm">
             {activeTab === 'created' && 'No events created yet'}
-            {activeTab === 'joined' && 'No events joined yet'}
             {activeTab === 'liked' && 'No events liked yet'}
           </Text>
-        </View>
+        </TouchableOpacity>
       );
     }
 
     return (
       <View className="flex-row flex-wrap justify-between">
-        {eventsToShow.map((event) => (
-          <EventCard key={event.id} event={event} />
-        ))}
+        {eventsToShow.map((event) => {
+          // Ensure event ID is valid before rendering
+          const eventId = event.id || event._id || (event as any)?._id || (event as any)?.id;
+
+          if (!eventId) {
+            console.warn('⚠️ Event missing ID, skipping navigation:', event);
+            return null;
+          }
+
+          return (
+            <EventCard
+              key={eventId}
+              event={event}
+              onPress={() => {
+                console.log('📍 Navigating to event details with ID:', eventId);
+                // Navigate to created event details page for created events
+                if (activeTab === 'created') {
+                  router.push(`/created-event-details/${eventId}`);
+                } else {
+                  router.push(`/event-details/${eventId}`);
+                }
+              }}
+            />
+          );
+        })}
       </View>
     );
   };
@@ -291,6 +526,14 @@ export default function ProfileScreen() {
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#9333EA"
+            colors={["#9333EA"]}
+          />
+        }
       >
         {/* Profile Header */}
         <View className="flex-row justify-end items-center px-5 pt-5 pb-2">
@@ -322,7 +565,7 @@ export default function ProfileScreen() {
             <Text className="text-[#9CA3AF] text-xs">Created</Text>
           </View>
           <View className="items-center">
-            <Text className="text-white text-2xl font-bold mb-1">{joinedEvents.length}</Text>
+            <Text className="text-white text-2xl font-bold mb-1">{joinedEventsData.length}</Text>
             <Text className="text-[#9CA3AF] text-xs">Joined</Text>
           </View>
           <View className="items-center">

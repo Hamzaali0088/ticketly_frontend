@@ -112,6 +112,12 @@ export const eventsAPI = {
     return response.data;
   },
 
+  // Get Tickets By Event ID (Organizer only)
+  getTicketsByEventId: async (eventId: string): Promise<{ success: boolean; count: number; tickets: any[] }> => {
+    const response = await apiClient.get(`/events/${eventId}/tickets`);
+    return response.data;
+  },
+
   // Upload Event Image
   uploadEventImage: async (imageUri: string): Promise<{ success: boolean; message: string; imageUrl: string }> => {
     // Platform detection: Use Platform.OS as the primary check
