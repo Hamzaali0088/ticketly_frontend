@@ -14,11 +14,17 @@ import { useRouter } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
 import { authAPI } from '@/lib/api/auth';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Token storage keys (must match client.ts)
+const ACCESS_TOKEN_KEY = 'accessToken';
+const REFRESH_TOKEN_KEY = 'refreshToken';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const user = useAppStore((state) => state.user);
   const setUser = useAppStore((state) => state.setUser);
+  const logout = useAppStore((state) => state.logout);
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
   
   // Edit Profile state
@@ -142,6 +148,56 @@ export default function SettingsScreen() {
       setPasswordError(error.response?.data?.message || 'Failed to update password. Please try again.');
     } finally {
       setLoadingPassword(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          await performLogout();
+        },
+      },
+    ]);
+  };
+
+  const performLogout = async () => {
+    try {
+      // Clear tokens from AsyncStorage
+      await Promise.all([
+        AsyncStorage.removeItem(ACCESS_TOKEN_KEY),
+        AsyncStorage.removeItem(REFRESH_TOKEN_KEY),
+      ]);
+
+      // Clear all AsyncStorage
+      await AsyncStorage.clear();
+
+      // For web, also clear localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+        window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+        window.localStorage.clear();
+      }
+
+      // Clear user state in store
+      await logout();
+
+      // Small delay to ensure storage operations complete
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Navigate to login
+      router.replace('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if there's an error, try to clear state and navigate
+      await logout();
+      router.replace('/login');
     }
   };
 
@@ -346,6 +402,18 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Logout Button */}
+        <View className="px-5 mt-6">
+          <View className="h-px bg-[#1F1F1F] mb-6" />
+          <TouchableOpacity
+            className="bg-[#EF4444] py-4 rounded-xl items-center"
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
+            <Text className="text-white text-base font-semibold">Logout</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
