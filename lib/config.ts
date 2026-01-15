@@ -10,7 +10,7 @@
 import { Platform } from 'react-native';
 
 // Get the API URL from environment variable or use default based on platform
-let defaultUrl = 'http://localhost:5001/api';
+let defaultUrl = 'https://ticketlybackend-production.up.railway.app/ap';
 
 // For React Native (mobile), localhost won't work on physical devices
 // Use your computer's local IP address instead
