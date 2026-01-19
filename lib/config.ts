@@ -27,54 +27,54 @@ const getEnvironment = (): Environment => {
 };
 
 // Get API base URL based on environment and platform
-const getApiBaseUrl = (): string => {
-  const env = getEnvironment();
-  
-  // If explicitly set via EXPO_PUBLIC_API_BASE_URL, use it (highest priority)
-  if (process.env.EXPO_PUBLIC_API_BASE_URL) {
-    return process.env.EXPO_PUBLIC_API_BASE_URL;
-  }
+// const getApiBaseUrl = (): string => {
+//   const env = getEnvironment();
 
-  // Production environment
-  if (env === 'production') {
-    return 'https://ticketlybackend-production.up.railway.app/api';
-  }
+//   // If explicitly set via EXPO_PUBLIC_API_BASE_URL, use it (highest priority)
+//   if (process.env.EXPO_PUBLIC_API_BASE_URL) {
+//     return process.env.EXPO_PUBLIC_API_BASE_URL;
+//   }
 
-  // Staging environment (if you have one)
-  if (env === 'staging') {
-    return process.env.EXPO_PUBLIC_STAGING_URL || 'https://ticketlybackend-staging.up.railway.app/api';
-  }
+//   // Production environment
+//   if (env === 'production') {
+//     return 'https://ticketlybackend-production.up.railway.app/api';
+//   }
 
-  // Local development - platform-specific defaults
-  if (Platform.OS === 'web') {
-    // Web browser - use localhost
-    return 'http://localhost:5001/api';
-  }
+//   // Staging environment (if you have one)
+//   if (env === 'staging') {
+//     return process.env.EXPO_PUBLIC_STAGING_URL || 'https://ticketlybackend-staging.up.railway.app/api';
+//   }
 
-  if (Platform.OS === 'android') {
-    // Android - check if running on emulator or physical device
-    // Emulator uses 10.0.2.2, physical device needs actual IP
-    // Default to localhost for emulator, but warn if not set
-    const localIp = process.env.EXPO_PUBLIC_LOCAL_IP || 'localhost';
-    if (localIp === 'localhost') {
-      // Assume emulator
-      return 'http://10.0.2.2:5001/api';
-    }
-    // Physical device - use provided IP
-    return `http://${localIp}:5001/api`;
-  }
+//   // Local development - platform-specific defaults
+//   if (Platform.OS === 'web') {
+//     // Web browser - use localhost
+//     return 'http://localhost:5001/api';
+//   }
 
-  if (Platform.OS === 'ios') {
-    // iOS - simulator uses localhost, physical device needs actual IP
-    const localIp = process.env.EXPO_PUBLIC_LOCAL_IP || 'localhost';
-    return `http://${localIp}:5001/api`;
-  }
+//   if (Platform.OS === 'android') {
+//     // Android - check if running on emulator or physical device
+//     // Emulator uses 10.0.2.2, physical device needs actual IP
+//     // Default to localhost for emulator, but warn if not set
+//     const localIp = process.env.EXPO_PUBLIC_LOCAL_IP || 'localhost';
+//     if (localIp === 'localhost') {
+//       // Assume emulator
+//       return 'http://10.0.2.2:5001/api';
+//     }
+//     // Physical device - use provided IP
+//     return `http://${localIp}:5001/api`;
+//   }
 
-  // Fallback
-  return 'http://localhost:5001/api';
-};
+//   if (Platform.OS === 'ios') {
+//     // iOS - simulator uses localhost, physical device needs actual IP
+//     const localIp = process.env.EXPO_PUBLIC_LOCAL_IP || 'localhost';
+//     return `http://${localIp}:5001/api`;
+//   }
 
-export const API_BASE_URL = getApiBaseUrl();
+//   // Fallback
+//   return 'http://localhost:5001/api';
+// };
+
+export const API_BASE_URL = "https://ticketlybackend-staging.up.railway.app/api";
 
 // Log the API URL being used (for debugging)
 if (__DEV__) {
@@ -82,7 +82,7 @@ if (__DEV__) {
   console.log('🌐 API Base URL:', API_BASE_URL);
   console.log('🌐 Platform:', Platform.OS);
   console.log('🌐 Local IP:', process.env.EXPO_PUBLIC_LOCAL_IP || 'not set (using default)');
-  
+
   // Warn if using localhost on mobile (won't work on physical devices)
   if (Platform.OS !== 'web' && API_BASE_URL.includes('localhost') && !API_BASE_URL.includes('10.0.2.2')) {
     console.warn('⚠️  WARNING: Using localhost on mobile. This will NOT work on physical devices!');
