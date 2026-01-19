@@ -1,38 +1,91 @@
 // API Configuration
-// Set EXPO_PUBLIC_API_BASE_URL in your .env file
-// Production: https://ticketlybackend-production.up.railway.app/api
-// Development options:
-//   - Web browser: http://localhost:5001/api
-//   - Android emulator: http://10.0.2.2:5001/api
-//   - iOS simulator: http://localhost:5001/api
-//   - Physical device: http://YOUR_COMPUTER_IP:5001/api
+// Environment-based API base URL configuration
+// 
+// To configure, create a .env file in the root directory with:
+// EXPO_PUBLIC_API_BASE_URL=http://YOUR_IP:5001/api
+//
+// Environment options:
+// - LOCAL: http://YOUR_LOCAL_IP:5001/api (for physical devices)
+// - EMULATOR: http://10.0.2.2:5001/api (for Android emulator)
+// - SIMULATOR: http://localhost:5001/api (for iOS simulator)
+// - WEB: http://localhost:5001/api (for web browser)
+// - PRODUCTION: https://ticketlybackend-production.up.railway.app/api
+//
+// To find your local IP:
+// - Windows: ipconfig | findstr "IPv4"
+// - Mac/Linux: ifconfig | grep "inet "
 
 import { Platform } from 'react-native';
 
-// Get the API URL from environment variable or use default based on platform
-let defaultUrl = 'https://ticketlybackend-production.up.railway.app/ap';
+// Environment types
+type Environment = 'local' | 'staging' | 'production';
 
-// For React Native (mobile), localhost won't work on physical devices
-// Use your computer's local IP address instead
-// To find your IP: run `ifconfig` (Mac/Linux) or `ipconfig` (Windows)
-// Common local IP: 192.168.x.x or 10.0.2.2 (Android emulator)
-if (Platform.OS !== 'web') {
-  // Mobile environment - check if we have an IP address set
-  // If not set, default to localhost (will work for emulator/simulator)
-  // For physical devices, you MUST set EXPO_PUBLIC_API_BASE_URL in .env
-  // Example: EXPO_PUBLIC_API_BASE_URL=http://192.168.0.127:5001/api
-  defaultUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
+// Get environment from env variable or default to 'local'
+const getEnvironment = (): Environment => {
+  const env = process.env.EXPO_PUBLIC_ENV || 'local';
+  return env as Environment;
+};
+
+// Get API base URL based on environment and platform
+const getApiBaseUrl = (): string => {
+  const env = getEnvironment();
   
-  // For Android emulator, use 10.0.2.2 instead of localhost
-  if (Platform.OS === 'android' && defaultUrl.includes('localhost')) {
-    defaultUrl = defaultUrl.replace('localhost', '10.0.2.2');
+  // If explicitly set via EXPO_PUBLIC_API_BASE_URL, use it (highest priority)
+  if (process.env.EXPO_PUBLIC_API_BASE_URL) {
+    return process.env.EXPO_PUBLIC_API_BASE_URL;
   }
-}
 
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || defaultUrl;
+  // Production environment
+  if (env === 'production') {
+    return 'https://ticketlybackend-production.up.railway.app/api';
+  }
+
+  // Staging environment (if you have one)
+  if (env === 'staging') {
+    return process.env.EXPO_PUBLIC_STAGING_URL || 'https://ticketlybackend-staging.up.railway.app/api';
+  }
+
+  // Local development - platform-specific defaults
+  if (Platform.OS === 'web') {
+    // Web browser - use localhost
+    return 'http://localhost:5001/api';
+  }
+
+  if (Platform.OS === 'android') {
+    // Android - check if running on emulator or physical device
+    // Emulator uses 10.0.2.2, physical device needs actual IP
+    // Default to localhost for emulator, but warn if not set
+    const localIp = process.env.EXPO_PUBLIC_LOCAL_IP || 'localhost';
+    if (localIp === 'localhost') {
+      // Assume emulator
+      return 'http://10.0.2.2:5001/api';
+    }
+    // Physical device - use provided IP
+    return `http://${localIp}:5001/api`;
+  }
+
+  if (Platform.OS === 'ios') {
+    // iOS - simulator uses localhost, physical device needs actual IP
+    const localIp = process.env.EXPO_PUBLIC_LOCAL_IP || 'localhost';
+    return `http://${localIp}:5001/api`;
+  }
+
+  // Fallback
+  return 'http://localhost:5001/api';
+};
+
+export const API_BASE_URL = getApiBaseUrl();
 
 // Log the API URL being used (for debugging)
 if (__DEV__) {
+  console.log('🌐 Environment:', getEnvironment());
   console.log('🌐 API Base URL:', API_BASE_URL);
   console.log('🌐 Platform:', Platform.OS);
+  console.log('🌐 Local IP:', process.env.EXPO_PUBLIC_LOCAL_IP || 'not set (using default)');
+  
+  // Warn if using localhost on mobile (won't work on physical devices)
+  if (Platform.OS !== 'web' && API_BASE_URL.includes('localhost') && !API_BASE_URL.includes('10.0.2.2')) {
+    console.warn('⚠️  WARNING: Using localhost on mobile. This will NOT work on physical devices!');
+    console.warn('⚠️  Set EXPO_PUBLIC_LOCAL_IP or EXPO_PUBLIC_API_BASE_URL in .env file');
+  }
 }

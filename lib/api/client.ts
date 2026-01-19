@@ -10,7 +10,11 @@ const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   // Don't set default Content-Type here - let the interceptor handle it
   // This prevents issues with FormData uploads
-  timeout: 60000, // 60 seconds timeout (file uploads can take longer)
+  timeout: 30000, // 30 seconds timeout (reduced for faster failure detection)
+  validateStatus: (status) => {
+    // Don't throw errors for status codes less than 500
+    return status < 500;
+  },
 });
 
 // Request interceptor to add access token
