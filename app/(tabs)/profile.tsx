@@ -71,12 +71,33 @@ export default function ProfileScreen() {
   // Helper function to get full profile image URL
   const getProfileImageUrl = () => {
     if (!user?.profileImage) return null;
-    
-    // If profileImageUrl is provided, use it
+
+    // If profileImageUrl is provided, prefer it
     if (user.profileImageUrl) {
+      // If backend returned a localhost URL (old data), rewrite it to use the current API base URL
+      if (
+        user.profileImageUrl.includes('localhost') ||
+        user.profileImageUrl.includes('127.0.0.1')
+      ) {
+        // Strip `/api` from API_BASE_URL and keep only the path part from the original URL
+        const baseUrl = API_BASE_URL.replace('/api', '');
+        try {
+          const url = new URL(user.profileImageUrl);
+          const path = url.pathname || '';
+          return `${baseUrl}${path}`;
+        } catch {
+          // Fallback: if URL parsing fails, try to find `/uploads` in the string
+          const uploadsIndex = user.profileImageUrl.indexOf('/uploads');
+          if (uploadsIndex !== -1) {
+            const path = user.profileImageUrl.substring(uploadsIndex);
+            return `${baseUrl}${path}`;
+          }
+        }
+      }
+
       return user.profileImageUrl;
     }
-    
+
     // Otherwise, construct from profileImage and API_BASE_URL
     if (user.profileImage.startsWith('http')) {
       return user.profileImage;
