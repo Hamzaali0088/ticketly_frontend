@@ -24,6 +24,13 @@ export default function Index() {
               return;
             }
           } catch (error: any) {
+            // Handle network errors gracefully
+            if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED' || error.message?.includes('Network')) {
+              console.log('Network error - backend may not be accessible');
+              // Don't try to refresh if network is down
+              return;
+            }
+            
             // If access token is expired, try refresh token
             if (error.response?.status === 401) {
               const refreshToken = await getRefreshToken();

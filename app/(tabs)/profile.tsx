@@ -17,6 +17,8 @@ import {
   RefreshControl,
   Image
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { API_BASE_URL } from '@/lib/config';
 
 // Token storage keys (must match client.ts)
 const ACCESS_TOKEN_KEY = 'accessToken';
@@ -62,8 +64,98 @@ export default function ProfileScreen() {
   const [joinedEvents, setJoinedEvents] = useState<any[]>([]);
   const [joinedEventsData, setJoinedEventsData] = useState<any[]>([]); // Store full data with tickets
   const [likedEvents, setLikedEvents] = useState<any[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const hasLoadedRef = useRef(false);
   const currentUserIdRef = useRef<string | null>(null);
+
+  // Helper function to get full profile image URL
+  const getProfileImageUrl = () => {
+    if (!user?.profileImage) return null;
+    
+    // If profileImageUrl is provided, use it
+    if (user.profileImageUrl) {
+      return user.profileImageUrl;
+    }
+    
+    // Otherwise, construct from profileImage and API_BASE_URL
+    if (user.profileImage.startsWith('http')) {
+      return user.profileImage;
+    }
+    
+    // Remove /api from API_BASE_URL if present, then add profileImage
+    const baseUrl = API_BASE_URL.replace('/api', '');
+    return `${baseUrl}${user.profileImage}`;
+  };
+
+  // Handle image picker
+  const pickImage = async () => {
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'We need access to your photos to upload profile images.');
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1], // Square for profile images
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        await uploadProfileImage(imageUri);
+      }
+    } catch (error: any) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
+  // Upload profile image
+  const uploadProfileImage = async (imageUri: string) => {
+    setUploadingImage(true);
+    try {
+      console.log('🔄 Starting profile image upload...');
+      const response = await authAPI.uploadProfileImage(imageUri);
+      
+      if (response.success) {
+        console.log('✅ Profile image upload successful:', response.profileImage);
+        
+        // Update user state with new profile image
+        if (response.user) {
+          setUser(response.user);
+        } else if (user) {
+          // If user object not in response, update profileImage manually
+          setUser({
+            ...user,
+            profileImage: response.profileImage,
+            profileImageUrl: response.profileImageUrl || response.profileImage,
+          });
+        }
+        
+        Alert.alert('Success', 'Profile image uploaded successfully!');
+      } else {
+        console.error('❌ Upload failed - response not successful:', response);
+        Alert.alert('Error', response.message || 'Failed to upload profile image');
+      }
+    } catch (error: any) {
+      console.error('❌ Upload error caught:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      Alert.alert(
+        'Upload Failed',
+        error.response?.data?.message || error.message || 'Failed to upload profile image. Please try again.'
+      );
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   useEffect(() => {
     // Load immediately when user is available
@@ -547,11 +639,36 @@ export default function ProfileScreen() {
 
         {/* Profile Section - Centered */}
         <View className="items-center py-6 pb-8">
-          <View className="w-[100px] h-[100px] rounded-full bg-[#9333EA] items-center justify-center mb-4">
-            <Text className="text-white text-4xl font-bold">
-              {user.fullName.charAt(0).toUpperCase()}
-            </Text>
-          </View>
+          <TouchableOpacity
+            onPress={pickImage}
+            disabled={uploadingImage}
+            activeOpacity={0.8}
+            className="relative"
+          >
+            <View className="w-[100px] h-[100px] rounded-full bg-[#9333EA] items-center justify-center mb-4 overflow-hidden">
+              {getProfileImageUrl() ? (
+                <Image
+                  source={{ uri: getProfileImageUrl()! }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text className="text-white text-4xl font-bold">
+                  {user.fullName.charAt(0).toUpperCase()}
+                </Text>
+              )}
+            </View>
+            {uploadingImage && (
+              <View className="absolute inset-0 bg-black/50 rounded-full items-center justify-center">
+                <ActivityIndicator size="small" color="#9333EA" />
+              </View>
+            )}
+            {!uploadingImage && (
+              <View className="absolute bottom-0 right-0 bg-[#9333EA] w-8 h-8 rounded-full items-center justify-center border-2 border-[#0F0F0F]">
+                <MaterialIcons name="camera-alt" size={16} color="#FFFFFF" />
+              </View>
+            )}
+          </TouchableOpacity>
           <Text className="text-white text-2xl font-bold mb-1">{user.fullName}</Text>
           {user.companyName && (
             <Text className="text-[#9333EA] text-base font-semibold mt-1">{user.companyName}</Text>
@@ -604,20 +721,6 @@ export default function ProfileScreen() {
 
         {/* Events List */}
         <View className="px-5 mb-8">{renderEvents()}</View>
-
-        {/* Logout */}
-        <View className="px-5">
-          <TouchableOpacity
-            className="bg-[#EF4444] py-4 rounded-xl items-center mt-2"
-            onPress={() => {
-              console.log('🔴🔴🔴 Logout TouchableOpacity onPress triggered!');
-              handleLogout();
-            }}
-            activeOpacity={0.7}
-          >
-            <Text className="text-white text-base font-semibold">Logout</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
     </View>
   );

@@ -5,9 +5,11 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -21,9 +23,11 @@ export default function TabLayout() {
           backgroundColor: '#0F0F0F',
           borderTopWidth: 1,
           borderTopColor: '#1F1F1F',
-          height: Platform.OS === 'ios' ? 90 : 70,
-          paddingBottom: Platform.OS === 'ios' ? 30 : 10,
-          paddingTop: 10,
+          height: Platform.OS === 'ios' ? 90 : 75,
+          paddingBottom: Platform.OS === 'ios' ? 30 : Math.max(insets.bottom, 50),
+          paddingTop: 12,
+          elevation: 0,
+          marginBottom: Platform.OS === 'android' ? 10 : 0,
         },
         tabBarLabelStyle: {
           fontSize: 12,
