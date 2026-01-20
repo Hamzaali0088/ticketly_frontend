@@ -1,26 +1,25 @@
 import { EventCard } from '@/components/EventCard';
 import { authAPI } from '@/lib/api/auth';
-import type { Event } from '@/lib/api/events';
 import { eventsAPI } from '@/lib/api/events';
+import { API_BASE_URL } from '@/lib/config';
 import { useAppStore } from '@/store/useAppStore';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter, useFocusEffect } from 'expo-router';
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
+  Platform,
+  RefreshControl,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
-  RefreshControl,
-  Image,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
-import { API_BASE_URL } from '@/lib/config';
 
 // Token storage keys (must match client.ts)
 const ACCESS_TOKEN_KEY = 'accessToken';
@@ -528,7 +527,7 @@ export default function ProfileScreen() {
 
     return (
       <TouchableOpacity
-        className="bg-[#1F1F1F] rounded-xl overflow-hidden mb-4 w-[48%]"
+        className="bg-[#1F1F1F] rounded-xl overflow-hidden mb-4 w-full"
         onPress={() => {
           if (eventId) {
             console.log('📍 Navigating to joined event details with ID:', eventId);
@@ -596,7 +595,7 @@ export default function ProfileScreen() {
             const event = joinedEventData.event;
             const eventId = event?.id || event?._id || `event-${index}`;
             return (
-              <View key={eventId}>
+              <View key={eventId} className="w-[48%]">
                 {renderJoinedEvent(joinedEventData, index)}
               </View>
             );
