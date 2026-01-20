@@ -132,19 +132,33 @@ export const eventsAPI = {
       : FormData;
     const formData = new FormDataConstructor();
     
-    // Extract filename from URI
-    // React Native URIs can be file:// or content://, so we need to handle both
-    let filename = imageUri.split('/').pop() || 'image.jpg';
-    // Remove query parameters if any
-    filename = filename.split('?')[0];
+    // Extract filename and MIME type from URI
+    // CRITICAL: React Native URIs can be file:// or content://
+    // content:// URIs don't have filenames, so we need a fallback
+    let filename = 'image.jpg'; // default
+    let type = 'image/jpeg'; // default
+    
+    // Try to extract filename from URI
+    if (imageUri.includes('/')) {
+      const uriParts = imageUri.split('/');
+      const lastPart = uriParts[uriParts.length - 1];
+      if (lastPart && lastPart.includes('.')) {
+        filename = lastPart.split('?')[0]; // Remove query params
+      }
+    }
     
     // Determine MIME type from file extension
-    let type = 'image/jpeg'; // default
+    // This is a fallback - ideally use type from expo-image-picker asset
     const ext = filename.split('.').pop()?.toLowerCase();
     if (ext === 'png') type = 'image/png';
     else if (ext === 'gif') type = 'image/gif';
     else if (ext === 'webp') type = 'image/webp';
     else if (ext === 'jpg' || ext === 'jpeg') type = 'image/jpeg';
+    
+    // For content:// URIs on Android, generate a proper filename
+    if (imageUri.startsWith('content://')) {
+      filename = `image_${Date.now()}.${ext || 'jpg'}`;
+    }
     
     console.log('Uploading image - Platform detection:', { 
       imageUri, 
@@ -225,18 +239,20 @@ export const eventsAPI = {
         throw new Error('Failed to process image for upload: ' + (error instanceof Error ? error.message : 'Unknown error'));
       }
     } else {
-      console.log('Using REACT NATIVE upload path');
+      console.log('📱 Using REACT NATIVE upload path');
       // React Native environment
-      // Append file to FormData using object format
-      // The field name 'image' must match the multer field name in the backend
+      // CRITICAL: FormData structure for React Native must use this exact format
+      // The field name 'image' must match Multer's field name in backend
+      // uri must be a valid file:// or content:// URI from expo-image-picker
       formData.append('image', {
         uri: imageUri,
         type: type,
         name: filename,
       } as any);
       
-      console.log('FormData prepared for React Native:', { 
-        uri: imageUri, 
+      console.log('📱 React Native FormData prepared:', { 
+        fieldName: 'image',
+        uri: imageUri.substring(0, 50) + '...', 
         type, 
         name: filename 
       });
@@ -249,14 +265,18 @@ export const eventsAPI = {
     });
 
     // Make request with multipart/form-data
-    // The Content-Type header will be automatically set by axios with the boundary
-    console.log('Sending upload request to /events/upload-image');
-    console.log('Request URL will be:', API_BASE_URL + '/events/upload-image');
+    // DO NOT set Content-Type header manually - axios will set it with boundary
+    console.log('📤 Sending upload request to:', '/events/upload-image');
+    console.log('📤 Request URL will be:', API_BASE_URL + '/events/upload-image');
     try {
       const response = await apiClient.post('/events/upload-image', formData, {
         timeout: 60000, // 60 seconds timeout for file uploads
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
+        // Let axios handle Content-Type automatically for FormData
+        headers: {
+          // Explicitly remove any Content-Type to let axios set it with boundary
+        },
       });
       console.log('✅ Upload response received:', {
         success: response.data?.success,
@@ -267,16 +287,25 @@ export const eventsAPI = {
     } catch (error: any) {
       console.error('❌ Upload request failed:', {
         message: error.message,
+        code: error.code,
         response: error.response?.data,
         status: error.response?.status,
         statusText: error.response?.statusText,
-        headers: error.response?.headers,
-        request: {
-          url: error.config?.url,
-          method: error.config?.method,
-          headers: error.config?.headers
-        }
+        requestUrl: error.config?.url,
+        requestMethod: error.config?.method,
       });
+      
+      // Provide user-friendly error messages
+      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network')) {
+        throw new Error('Network error. Please check your internet connection and ensure the backend server is running.');
+      }
+      if (error.response?.status === 400) {
+        throw new Error(error.response.data?.message || 'Invalid image file. Please try a different image.');
+      }
+      if (error.response?.status === 413) {
+        throw new Error('Image file is too large. Maximum size is 5MB.');
+      }
+      
       throw error;
     }
   },

@@ -84,7 +84,18 @@ export default function CreateEventScreen() {
     });
 
     if (!result.canceled && result.assets[0]) {
-      const imageUri = result.assets[0].uri;
+      const asset = result.assets[0];
+      const imageUri = asset.uri;
+      
+      // Log asset info for debugging
+      console.log('📸 Image selected:', {
+        uri: imageUri.substring(0, 50) + '...',
+        type: asset.type,
+        width: asset.width,
+        height: asset.height,
+        fileSize: asset.fileSize,
+      });
+      
       setFormData((prev) => ({ ...prev, imageUri }));
 
       // Upload image immediately

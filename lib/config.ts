@@ -26,12 +26,54 @@ const getEnvironment = (): Environment => {
   return env as Environment;
 };
 
-// NOTE:
-// The mobile and web apps should **always** talk to the Railway backend,
-// so we export a single constant pointing at the production Railway URL.
-// If you ever need staging/local again, re‑enable the environment logic above.
+// Get API base URL based on environment and platform
+const getApiBaseUrl = (): string => {
+  const env = getEnvironment();
+  
+  // If explicitly set via EXPO_PUBLIC_API_BASE_URL, use it (highest priority)
+  if (process.env.EXPO_PUBLIC_API_BASE_URL) {
+    return process.env.EXPO_PUBLIC_API_BASE_URL;
+  }
 
-export const API_BASE_URL = "https://ticketlybackend-production.up.railway.app/api";
+  // Production environment
+  if (env === 'production') {
+    return 'https://ticketlybackend-production.up.railway.app/api';
+  }
+
+  // Staging environment (if you have one)
+  if (env === 'staging') {
+    return process.env.EXPO_PUBLIC_STAGING_URL || 'https://ticketlybackend-staging.up.railway.app/api';
+  }
+
+  // Local development - platform-specific defaults
+  if (Platform.OS === 'web') {
+    // Web browser - use localhost
+    return 'http://localhost:5001/api';
+  }
+
+  if (Platform.OS === 'android') {
+    // Android - check if running on emulator or physical device
+    // Emulator uses 10.0.2.2, physical device needs actual IP
+    const localIp = process.env.EXPO_PUBLIC_LOCAL_IP || 'localhost';
+    if (localIp === 'localhost') {
+      // Assume emulator
+      return 'http://10.0.2.2:5001/api';
+    }
+    // Physical device - use provided IP
+    return `http://${localIp}:5001/api`;
+  }
+
+  if (Platform.OS === 'ios') {
+    // iOS - simulator uses localhost, physical device needs actual IP
+    const localIp = process.env.EXPO_PUBLIC_LOCAL_IP || 'localhost';
+    return `http://${localIp}:5001/api`;
+  }
+
+  // Fallback
+  return 'http://localhost:5001/api';
+};
+
+export const API_BASE_URL = getApiBaseUrl();
 
 // Log the API URL being used (for debugging)
 if (__DEV__) {

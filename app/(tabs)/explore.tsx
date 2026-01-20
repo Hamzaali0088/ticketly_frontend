@@ -10,7 +10,9 @@ import {
   View,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Event } from '@/lib/api/events';
 
 // Helper function to convert API event to app event format
@@ -36,8 +38,17 @@ export default function ExploreScreen() {
   const router = useRouter();
   const events = useAppStore((state) => state.events);
   const setEvents = useAppStore((state) => state.setEvents);
+  const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Calculate bottom padding: tab bar height + safe area bottom + extra padding
+  // Tab bar layout: iOS height=90 (includes paddingBottom=30), Android height=75 + paddingBottom + marginBottom=10
+  // Total space from bottom: iOS = 90 + insets.bottom, Android = 75 + max(insets.bottom, 50) + 10 + insets.bottom
+  const tabBarTotalHeight = Platform.OS === 'ios' 
+    ? 90 + insets.bottom // iOS: height includes padding, add safe area
+    : 75 + Math.max(insets.bottom, 50) + 10 + insets.bottom; // Android: height + paddingBottom + marginBottom + safe area
+  const bottomPadding = tabBarTotalHeight + 20; // Extra 20px for comfortable spacing
 
   useEffect(() => {
     loadEvents();
@@ -98,7 +109,7 @@ export default function ExploreScreen() {
         renderItem={({ item }) => <EventCard event={item} />}
         keyExtractor={(item) => item.id}
         numColumns={2}
-        contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: bottomPadding }}
         columnWrapperStyle={{ justifyContent: 'space-between' }}
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center py-15">
