@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
+  RefreshControl,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
@@ -27,6 +28,7 @@ export default function EventDetailsScreen() {
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
@@ -42,41 +44,65 @@ export default function EventDetailsScreen() {
   const [ticketsSectionY, setTicketsSectionY] = useState<number>(0);
 
   // Fetch event from API
-  useEffect(() => {
-    const fetchEvent = async () => {
-      if (!id) {
-        setError('Event ID is required');
-        setLoading(false);
-        return;
-      }
+  const fetchEvent = async (showRefreshing = false) => {
+    if (!id) {
+      setError('Event ID is required');
+      setLoading(false);
+      return;
+    }
 
-      try {
+    try {
+      if (showRefreshing) {
+        setRefreshing(true);
+      } else {
         setLoading(true);
-        setError(null);
-        const response = await eventsAPI.getEventById(id);
-
-        if (response.success && response.event) {
-          // Transform backend event to match frontend structure
-          const eventData = response.event as any;
-          const transformedEvent: Event = {
-            ...eventData,
-            _id: eventData.id || eventData._id,
-          };
-          setEvent(transformedEvent);
-        } else {
-          setError('Event not found');
-        }
-      } catch (err: any) {
-        console.error('Error fetching event:', err);
-        const errorMessage = err.response?.data?.message || err.message || 'Failed to load event';
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
       }
-    };
+      setError(null);
+      const response = await eventsAPI.getEventById(id);
 
+      if (response.success && response.event) {
+        // Transform backend event to match frontend structure
+        const eventData = response.event as any;
+        const transformedEvent: Event = {
+          ...eventData,
+          _id: eventData.id || eventData._id,
+        };
+        setEvent(transformedEvent);
+      } else {
+        setError('Event not found');
+      }
+    } catch (err: any) {
+      console.error('Error fetching event:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to load event';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     fetchEvent();
   }, [id]);
+
+  const onRefresh = async () => {
+    await fetchEvent(true);
+    // Also refresh user tickets
+    if (event && user && id) {
+      try {
+        const response = await ticketsAPI.getMyTickets();
+        if (response.success && response.tickets) {
+          const eventTickets = response.tickets.filter(
+            (ticket: any) => ticket.event?._id === id || ticket.event?.id === id || ticket.eventId === id
+          );
+          setUserTickets(eventTickets);
+          setIsRegistered(eventTickets.length > 0);
+        }
+      } catch (error) {
+        console.error('Error refreshing user tickets:', error);
+      }
+    }
+  };
 
   // Fetch user's tickets for this event
   useEffect(() => {
@@ -269,6 +295,14 @@ export default function EventDetailsScreen() {
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#9333EA"
+            colors={["#9333EA"]}
+          />
+        }
       >
         {/* Header Image */}
         <View className="w-full h-[300px] relative">

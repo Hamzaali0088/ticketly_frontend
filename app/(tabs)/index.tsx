@@ -17,6 +17,7 @@ import {
   Animated,
   Easing,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Event } from '@/lib/api/events';
@@ -54,6 +55,7 @@ export default function HomeScreen() {
   const [featuredEvents, setFeaturedEvents] = useState<any[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -72,9 +74,13 @@ export default function HomeScreen() {
     loadEvents();
   }, []);
 
-  const loadEvents = async () => {
+  const loadEvents = async (showRefreshing = false) => {
     try {
-      setLoading(true);
+      if (showRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       const response = await eventsAPI.getApprovedEvents();
       if (response.success && response.events) {
         const convertedEvents = response.events.map(convertEvent);
@@ -94,7 +100,12 @@ export default function HomeScreen() {
       Alert.alert('Error', error.response?.data?.message || 'Failed to load events');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = () => {
+    loadEvents(true);
   };
 
   if (loading) {
@@ -111,6 +122,14 @@ export default function HomeScreen() {
         className="flex-1"
         contentContainerStyle={{ paddingBottom: bottomPadding }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#9333EA"
+            colors={["#9333EA"]}
+          />
+        }
       >
         {/* Header */}
         <View className="pt-[60px] px-5 pb-5">

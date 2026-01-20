@@ -7,6 +7,7 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';

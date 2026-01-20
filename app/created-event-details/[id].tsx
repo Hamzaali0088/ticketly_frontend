@@ -51,7 +51,7 @@ export default function CreatedEventDetailsScreen() {
   };
 
   // Fetch event details
-  const fetchEvent = async () => {
+  const fetchEvent = async (showRefreshing = false) => {
     const eventId = getEventId();
 
     if (!eventId) {
@@ -61,7 +61,11 @@ export default function CreatedEventDetailsScreen() {
     }
 
     try {
-      setLoading(true);
+      if (showRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
       console.log('Fetching event with ID:', eventId, 'Type:', typeof eventId);
       const response = await eventsAPI.getEventById(String(eventId));
@@ -88,17 +92,20 @@ export default function CreatedEventDetailsScreen() {
       setError(errorMessage);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   // Fetch tickets for this event
-  const fetchTickets = async () => {
+  const fetchTickets = async (showRefreshing = false) => {
     const eventId = getEventId();
 
     if (!eventId) return;
 
     try {
-      setLoadingTickets(true);
+      if (!showRefreshing) {
+        setLoadingTickets(true);
+      }
       console.log('Fetching tickets for event ID:', eventId);
       const response = await eventsAPI.getTicketsByEventId(String(eventId));
       if (response.success && response.tickets) {
@@ -132,12 +139,7 @@ export default function CreatedEventDetailsScreen() {
 
   // Refresh both event and tickets
   const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([fetchEvent(), fetchTickets()]);
-    } finally {
-      setRefreshing(false);
-    }
+    await Promise.all([fetchEvent(true), fetchTickets(true)]);
   };
 
   // Filter tickets by status
@@ -232,21 +234,6 @@ export default function CreatedEventDetailsScreen() {
   if (loading && !event) {
     return (
       <View className="flex-1 bg-[#0F0F0F]">
-        {/* Fixed Reload Button */}
-        <TouchableOpacity
-          className="absolute top-[50px] right-5 z-50 bg-black/50 w-10 h-10 rounded-full items-center justify-center"
-          onPress={onRefresh}
-          disabled={refreshing || loading}
-        >
-          <MaterialIcons
-            name="refresh"
-            size={20}
-            color="#FFFFFF"
-            style={{
-              transform: [{ rotate: refreshing || loading ? '180deg' : '0deg' }]
-            }}
-          />
-        </TouchableOpacity>
         <View className="flex-1 items-center justify-center p-10">
           <ActivityIndicator size="large" color="#9333EA" />
           <Text className="text-white text-base mt-4">Loading event...</Text>
@@ -258,21 +245,6 @@ export default function CreatedEventDetailsScreen() {
   if (error || !event) {
     return (
       <View className="flex-1 bg-[#0F0F0F]">
-        {/* Fixed Reload Button */}
-        <TouchableOpacity
-          className="absolute top-[50px] right-5 z-50 bg-black/50 w-10 h-10 rounded-full items-center justify-center"
-          onPress={onRefresh}
-          disabled={refreshing || loading}
-        >
-          <MaterialIcons
-            name="refresh"
-            size={20}
-            color="#FFFFFF"
-            style={{
-              transform: [{ rotate: refreshing || loading ? '180deg' : '0deg' }]
-            }}
-          />
-        </TouchableOpacity>
         <View className="flex-1 items-center justify-center p-10">
           <Text className="text-[#EF4444] text-lg mb-6">{error || 'Event not found'}</Text>
           <TouchableOpacity
@@ -290,23 +262,6 @@ export default function CreatedEventDetailsScreen() {
 
   return (
     <View className="flex-1 bg-[#0F0F0F]">
-      {/* Fixed Reload Button - Always Visible */}
-      <TouchableOpacity
-        className="absolute top-[50px] right-5 z-50 bg-black/70 w-10 h-10 rounded-full items-center justify-center shadow-lg"
-        onPress={onRefresh}
-        disabled={refreshing || loading}
-        style={{ elevation: 5 }}
-      >
-        <MaterialIcons
-          name="refresh"
-          size={20}
-          color="#FFFFFF"
-          style={{
-            transform: [{ rotate: refreshing || loading ? '180deg' : '0deg' }]
-          }}
-        />
-      </TouchableOpacity>
-
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 100 }}

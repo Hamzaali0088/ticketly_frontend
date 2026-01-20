@@ -528,7 +528,7 @@ export default function ProfileScreen() {
 
     return (
       <TouchableOpacity
-        className="bg-[#1F1F1F] rounded-xl overflow-hidden mb-4"
+        className="bg-[#1F1F1F] rounded-xl overflow-hidden mb-4 w-[48%]"
         onPress={() => {
           if (eventId) {
             console.log('📍 Navigating to joined event details with ID:', eventId);
@@ -591,11 +591,12 @@ export default function ProfileScreen() {
       }
 
       return (
-        <View>
+        <View className="flex-row flex-wrap justify-between">
           {joinedEventsData.map((joinedEventData, index) => {
             const event = joinedEventData.event;
+            const eventId = event?.id || event?._id || `event-${index}`;
             return (
-              <View key={event?.id || event?._id || `event-${index}`}>
+              <View key={eventId}>
                 {renderJoinedEvent(joinedEventData, index)}
               </View>
             );

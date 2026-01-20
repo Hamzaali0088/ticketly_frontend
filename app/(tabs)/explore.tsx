@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Event } from '@/lib/api/events';
@@ -41,6 +42,7 @@ export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Calculate bottom padding: tab bar height + safe area bottom + extra padding
   // Tab bar layout: iOS height=90 (includes paddingBottom=30), Android height=75 + paddingBottom + marginBottom=10
@@ -54,9 +56,13 @@ export default function ExploreScreen() {
     loadEvents();
   }, []);
 
-  const loadEvents = async () => {
+  const loadEvents = async (showRefreshing = false) => {
     try {
-      setLoading(true);
+      if (showRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       const response = await eventsAPI.getApprovedEvents();
       if (response.success && response.events) {
         const convertedEvents = response.events.map(convertEvent);
@@ -66,7 +72,12 @@ export default function ExploreScreen() {
       Alert.alert('Error', error.response?.data?.message || 'Failed to load events');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = () => {
+    loadEvents(true);
   };
 
   const filteredEvents = useMemo(() => {
@@ -111,6 +122,14 @@ export default function ExploreScreen() {
         numColumns={2}
         contentContainerStyle={{ padding: 20, paddingBottom: bottomPadding }}
         columnWrapperStyle={{ justifyContent: 'space-between' }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#9333EA"
+            colors={["#9333EA"]}
+          />
+        }
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center py-15">
             <Text className="text-[#6B7280] text-base">No events found</Text>
