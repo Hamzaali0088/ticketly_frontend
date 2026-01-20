@@ -159,7 +159,7 @@ export default function CreatedEventDetailsScreen() {
           textColor: 'text-[#10B981]',
           iconColor: '#10B981',
           icon: 'check-circle',
-          label: 'Confirmed'
+          label: 'Submitted'
         };
       case 'pending_payment':
         return {
@@ -169,7 +169,7 @@ export default function CreatedEventDetailsScreen() {
           textColor: 'text-[#F59E0B]',
           iconColor: '#F59E0B',
           icon: 'schedule',
-          label: 'Pending Payment'
+          label: 'Pending'
         };
       case 'payment_submitted':
         return {
@@ -179,7 +179,7 @@ export default function CreatedEventDetailsScreen() {
           textColor: 'text-[#3B82F6]',
           iconColor: '#3B82F6',
           icon: 'hourglass-empty',
-          label: 'Payment Submitted'
+          label: 'In Review'
         };
       case 'used':
         return {
@@ -223,8 +223,8 @@ export default function CreatedEventDetailsScreen() {
   const tabs: { key: TicketStatus; label: string }[] = [
     { key: 'all', label: 'All' },
     { key: 'pending_payment', label: 'Pending' },
-    { key: 'payment_submitted', label: 'Submitted' },
-    { key: 'confirmed', label: 'Confirmed' },
+    { key: 'payment_submitted', label: 'In Review' },
+    { key: 'confirmed', label: 'Submitted' },
     { key: 'used', label: 'Used' },
     { key: 'cancelled', label: 'Cancelled' },
   ];

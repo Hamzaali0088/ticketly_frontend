@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { setTokens, clearTokens } from './client';
+import { setTokens, clearTokens, getAccessToken } from './client';
 import { Platform } from 'react-native';
 import { API_BASE_URL } from '../config';
 
@@ -187,7 +187,7 @@ export const authAPI = {
   uploadProfileImage: async (imageUri: string): Promise<{ success: boolean; message: string; profileImage: string; profileImageUrl?: string; user?: UserProfile }> => {
     // Platform detection: Use Platform.OS as the primary check
     const isWeb = Platform.OS === 'web';
-    
+
     // Create FormData for multipart/form-data upload
     const FormDataConstructor = (isWeb && typeof window !== 'undefined' && (window as any).FormData) 
       ? (window as any).FormData 
@@ -221,12 +221,12 @@ export const authAPI = {
     if (imageUri.startsWith('content://')) {
       filename = `image_${Date.now()}.${ext || 'jpg'}`;
     }
-    
+
     if (isWeb) {
-      // Web browser environment
+      // 🌐 Web browser environment — keep using axios (already working)
       try {
         let blob: Blob;
-        
+
         // Helper function to convert response to blob
         const responseToBlob = async (response: Response): Promise<Blob> => {
           if (typeof response.blob === 'function') {
@@ -239,7 +239,7 @@ export const authAPI = {
           const text = await response.text();
           return new Blob([text], { type: response.headers.get('content-type') || type });
         };
-        
+
         // Helper function to convert data URL to blob
         const dataURLToBlob = (dataURL: string): Blob => {
           const arr = dataURL.split(',');
@@ -253,7 +253,7 @@ export const authAPI = {
           }
           return new Blob([u8arr], { type: mime });
         };
-        
+
         // Handle different URI types
         if (imageUri.startsWith('data:')) {
           blob = dataURLToBlob(imageUri);
@@ -267,74 +267,127 @@ export const authAPI = {
           const response = await fetch(imageUri);
           blob = await responseToBlob(response);
         }
-        
+
         // Create a File object from the blob
         const file = new File([blob], filename, { type: blob.type || type });
         formData.append('image', file);
-      } catch (error) {
-        console.error('Error processing image for web upload:', error);
-        throw new Error('Failed to process image for upload: ' + (error instanceof Error ? error.message : 'Unknown error'));
+
+        console.log('🌐 Web FormData prepared for profile upload:', {
+          hasFile: file instanceof File,
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+        });
+
+        console.log('📤 Sending web upload request to:', '/auth/upload-profile-image');
+        const response = await apiClient.post('/auth/upload-profile-image', formData, {
+          timeout: 60000,
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+          headers: {},
+        });
+
+        console.log('✅ Web upload successful:', {
+          success: response.data?.success,
+          profileImage: response.data?.profileImage,
+        });
+
+        return response.data;
+      } catch (error: any) {
+        console.error('❌ Web upload failed:', {
+          message: error.message,
+          code: error.code,
+          response: error.response?.data,
+          status: error.response?.status,
+          requestUrl: error.config?.url,
+          requestMethod: error.config?.method,
+        });
+
+        if (error.code === 'ERR_NETWORK' || error.message?.includes('Network')) {
+          throw new Error('Network error. Please check your internet connection and ensure the backend server is running.');
+        }
+        if (error.response?.status === 400) {
+          throw new Error(error.response.data?.message || 'Invalid image file. Please try a different image.');
+        }
+        if (error.response?.status === 413) {
+          throw new Error('Image file is too large. Maximum size is 5MB.');
+        }
+
+        throw error;
       }
-    } else {
-      // React Native environment
-      // CRITICAL: FormData structure for React Native must use this exact format
-      // The field name 'image' must match Multer's field name in backend
-      // uri must be a valid file:// or content:// URI from expo-image-picker
-      formData.append('image', {
-        uri: imageUri,
-        type: type,
-        name: filename,
-      } as any);
-      
-      console.log('📱 React Native FormData prepared:', {
-        fieldName: 'image',
-        uri: imageUri.substring(0, 50) + '...',
-        type,
-        name: filename,
-      });
     }
 
-    // Make request with multipart/form-data
-    // DO NOT set Content-Type header manually - axios will set it with boundary
+    // 📱 React Native environment — use fetch instead of axios to avoid RN axios/FormData issues
+    formData.append('image', {
+      uri: imageUri,
+      type,
+      name: filename,
+    } as any);
+
+    console.log('📱 React Native FormData prepared for profile upload:', {
+      fieldName: 'image',
+      uri: imageUri.substring(0, 50) + '...',
+      type,
+      name: filename,
+    });
+
     try {
-      console.log('📤 Sending upload request to:', '/auth/upload-profile-image');
-      const response = await apiClient.post('/auth/upload-profile-image', formData, {
-        timeout: 60000, // 60 seconds timeout for file uploads
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-        // Let axios handle Content-Type automatically for FormData
+      const accessToken = await getAccessToken();
+      const url = `${API_BASE_URL}/auth/upload-profile-image`;
+
+      console.log('📤 [RN] Sending upload request via fetch to:', url);
+
+      const response = await fetch(url, {
+        method: 'POST',
         headers: {
-          // Explicitly remove any Content-Type to let axios set it with boundary
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          // Do NOT set Content-Type; RN will set multipart boundary automatically
         },
+        body: formData as any,
       });
-      
-      console.log('✅ Upload successful:', {
-        success: response.data?.success,
-        profileImage: response.data?.profileImage,
+
+      const responseText = await response.text();
+      let data: any = null;
+
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        console.warn('⚠️ [RN] Failed to parse JSON response for profile upload, raw text:', responseText);
+        throw new Error('Unexpected response from server while uploading image.');
+      }
+
+      if (!response.ok) {
+        console.error('❌ [RN] Upload HTTP error:', {
+          status: response.status,
+          body: data,
+        });
+
+        if (response.status === 400) {
+          throw new Error(data?.message || 'Invalid image file. Please try a different image.');
+        }
+        if (response.status === 413) {
+          throw new Error('Image file is too large. Maximum size is 5MB.');
+        }
+
+        throw new Error(data?.message || `Upload failed with status ${response.status}`);
+      }
+
+      console.log('✅ [RN] Profile upload successful:', {
+        success: data?.success,
+        profileImage: data?.profileImage,
       });
-      
-      return response.data;
+
+      return data;
     } catch (error: any) {
-      console.error('❌ Upload failed:', {
-        message: error.message,
-        code: error.code,
-        response: error.response?.data,
-        status: error.response?.status,
-        requestUrl: error.config?.url,
-        requestMethod: error.config?.method,
+      console.error('❌ [RN] Upload failed via fetch:', {
+        message: error?.message,
+        name: error?.name,
       });
-      
-      // Provide user-friendly error messages
-      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network')) {
+
+      if (error?.message?.includes('Network request failed')) {
         throw new Error('Network error. Please check your internet connection and ensure the backend server is running.');
       }
-      if (error.response?.status === 400) {
-        throw new Error(error.response.data?.message || 'Invalid image file. Please try a different image.');
-      }
-      if (error.response?.status === 413) {
-        throw new Error('Image file is too large. Maximum size is 5MB.');
-      }
-      
+
       throw error;
     }
   },

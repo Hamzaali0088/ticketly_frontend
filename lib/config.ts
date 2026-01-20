@@ -29,7 +29,7 @@ const getEnvironment = (): Environment => {
 // Get API base URL based on environment and platform
 const getApiBaseUrl = (): string => {
   const env = getEnvironment();
-  
+
   // If explicitly set via EXPO_PUBLIC_API_BASE_URL, use it (highest priority)
   if (process.env.EXPO_PUBLIC_API_BASE_URL) {
     return process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -73,7 +73,9 @@ const getApiBaseUrl = (): string => {
   return 'http://localhost:5001/api';
 };
 
-export const API_BASE_URL = getApiBaseUrl();
+// export const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = "https://ticketlybackend-production.up.railway.app/api";
+
 
 // Log the API URL being used (for debugging)
 if (__DEV__) {

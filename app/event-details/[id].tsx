@@ -342,22 +342,20 @@ export default function EventDetailsScreen() {
             </View>
           </View>
 
-          {/* Register Button */}
-          {!isRegistered && (
-            <TouchableOpacity
-              className={`py-4 rounded-xl items-center mt-2 ${isRegistered ? 'bg-[#10B981]' : 'bg-[#9333EA]'}`}
-              onPress={isRegistered ? handleViewTicket : handleRegister}
-              disabled={creatingTicket}
-            >
-              {creatingTicket ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text className="text-white text-base font-bold">
-                  Register Now
-                </Text>
-              )}
-            </TouchableOpacity>
-          )}
+          {/* Register / Get More Tickets Button */}
+          <TouchableOpacity
+            className={`py-4 rounded-xl items-center mt-2 bg-[#9333EA]`}
+            onPress={handleRegister}
+            disabled={creatingTicket}
+          >
+            {creatingTicket ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text className="text-white text-base font-bold">
+                {isRegistered ? 'Get More Tickets' : 'Register Now'}
+              </Text>
+            )}
+          </TouchableOpacity>
 
         </View>
 
@@ -421,7 +419,7 @@ export default function EventDetailsScreen() {
                       textColor: 'text-[#10B981]',
                       iconColor: '#10B981',
                       icon: 'check-circle',
-                      label: 'Confirmed'
+                      label: 'Submitted'
                     };
                   case 'pending_payment':
                     return {
@@ -431,7 +429,7 @@ export default function EventDetailsScreen() {
                       textColor: 'text-[#F59E0B]',
                       iconColor: '#F59E0B',
                       icon: 'schedule',
-                      label: 'Pending Payment'
+                      label: 'Pending'
                     };
                   case 'payment_submitted':
                     return {
@@ -441,7 +439,7 @@ export default function EventDetailsScreen() {
                       textColor: 'text-[#3B82F6]',
                       iconColor: '#3B82F6',
                       icon: 'hourglass-empty',
-                      label: 'Payment Submitted'
+                      label: 'In Review'
                     };
                   case 'used':
                     return {

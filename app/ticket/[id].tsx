@@ -255,11 +255,11 @@ export default function TicketScreen() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return 'Confirmed';
+        return 'Submitted';
       case 'pending_payment':
-        return 'Pending Payment';
+        return 'Pending';
       case 'payment_submitted':
-        return 'Waiting for Approval';
+        return 'In Review';
       case 'used':
         return 'Used';
       case 'cancelled':

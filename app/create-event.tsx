@@ -30,6 +30,7 @@ interface EventFormData {
   eventLocation: string;
   eventDate: Date | null;
   eventCity: string;
+  ticketPrice: string;
   // Step 2
   eventCategory: string;
   description: string;
@@ -55,6 +56,7 @@ export default function CreateEventScreen() {
     eventLocation: '',
     eventDate: null,
     eventCity: '',
+    ticketPrice: '',
     eventCategory: '',
     description: '',
     imageUri: null,
@@ -86,7 +88,7 @@ export default function CreateEventScreen() {
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
       const imageUri = asset.uri;
-      
+
       // Log asset info for debugging
       console.log('📸 Image selected:', {
         uri: imageUri.substring(0, 50) + '...',
@@ -95,7 +97,7 @@ export default function CreateEventScreen() {
         height: asset.height,
         fileSize: asset.fileSize,
       });
-      
+
       setFormData((prev) => ({ ...prev, imageUri }));
 
       // Upload image immediately
@@ -135,9 +137,29 @@ export default function CreateEventScreen() {
   };
 
   const handleSubmit = async () => {
-    // Validate all required fields
-    if (!formData.eventName || !formData.eventLocation || !formData.eventDate || !formData.eventCity) {
-      Alert.alert('Validation Error', 'Please fill in all required fields (Event Name, Location, Date, City)');
+    // Validate all required fields with clear messages
+    if (!formData.eventName) {
+      Alert.alert('Validation Error', 'Event Name is required');
+      return;
+    }
+
+    if (!formData.eventLocation) {
+      Alert.alert('Validation Error', 'Event Location is required');
+      return;
+    }
+
+    if (!formData.eventDate) {
+      Alert.alert('Validation Error', 'Event Date is required');
+      return;
+    }
+
+    if (!formData.eventCity) {
+      Alert.alert('Validation Error', 'Event City is required');
+      return;
+    }
+
+    if (!formData.eventCategory) {
+      Alert.alert('Validation Error', 'Event Category is required');
       return;
     }
 
@@ -148,6 +170,17 @@ export default function CreateEventScreen() {
 
     if (!formData.email || !formData.phone) {
       Alert.alert('Validation Error', 'Please fill in your email and phone number');
+      return;
+    }
+
+    // Validate ticket price (allow 0 for free events, but require a value)
+    if (formData.ticketPrice.trim() === '') {
+      Alert.alert('Validation Error', 'Please enter a ticket price (use 0 for free events)');
+      return;
+    }
+    const parsedPrice = Number(formData.ticketPrice);
+    if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
+      Alert.alert('Validation Error', 'Ticket price must be a valid number greater than or equal to 0');
       return;
     }
 
@@ -195,7 +228,7 @@ export default function CreateEventScreen() {
         image: imageUrl || '',
         email: formData.email,
         phone: formData.phone,
-        ticketPrice: 0, // Default price
+        ticketPrice: parsedPrice, // Use entered price
         totalTickets: 100, // Default tickets
       });
 
@@ -392,6 +425,16 @@ export default function CreateEventScreen() {
             placeholderTextColor="#6B7280"
             value={formData.eventCity}
             onChangeText={(value) => handleInputChange('eventCity', value)}
+          />
+
+          <Text className="text-white text-sm font-semibold mb-2 mt-4">Ticket Price (PKR)</Text>
+          <TextInput
+            className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base"
+            placeholder="e.g. 1500 (use 0 for free events)"
+            placeholderTextColor="#6B7280"
+            value={formData.ticketPrice}
+            onChangeText={(value) => handleInputChange('ticketPrice', value)}
+            keyboardType="numeric"
           />
 
           <Text className="text-white text-sm font-semibold mb-2 mt-4">
