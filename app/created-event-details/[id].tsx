@@ -13,7 +13,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { eventsAPI, type Event } from '@/lib/api/events';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
-type TicketStatus = 'all' | 'pending_payment' | 'payment_submitted' | 'confirmed' | 'used' | 'cancelled';
+type TicketStatus = 'all' | 'pending_payment' | 'payment_in_review' | 'confirmed' | 'used' | 'cancelled';
 
 interface Ticket {
   id: string;
@@ -171,7 +171,7 @@ export default function CreatedEventDetailsScreen() {
           icon: 'schedule',
           label: 'Pending'
         };
-      case 'payment_submitted':
+      case 'payment_in_review':
         return {
           bgColor: 'bg-[#3B82F6]/20',
           borderColor: 'border-[#3B82F6]/50',
@@ -223,7 +223,7 @@ export default function CreatedEventDetailsScreen() {
   const tabs: { key: TicketStatus; label: string }[] = [
     { key: 'all', label: 'All' },
     { key: 'pending_payment', label: 'Pending' },
-    { key: 'payment_submitted', label: 'In Review' },
+    { key: 'payment_in_review', label: 'In Review' },
     { key: 'confirmed', label: 'Submitted' },
     { key: 'used', label: 'Used' },
     { key: 'cancelled', label: 'Cancelled' },

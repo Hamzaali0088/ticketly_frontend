@@ -1,6 +1,7 @@
 import apiClient from './client';
 import { Platform } from 'react-native';
 import { API_BASE_URL } from '../config';
+import { getAccessToken } from './client';
 
 export interface SubmitPaymentRequest {
   ticketId: string;
@@ -173,17 +174,14 @@ export const paymentsAPI = {
         throw new Error('Failed to process screenshot for upload: ' + (error instanceof Error ? error.message : 'Unknown error'));
       }
     } else {
-      // React Native environment
-      // CRITICAL: FormData structure for React Native must use this exact format
-      // The field name 'screenshot' must match Multer's field name in backend (PaymentRouter.js)
-      // uri must be a valid file:// or content:// URI from expo-image-picker
+      // 📱 React Native environment — use fetch instead of axios to avoid RN axios/FormData issues
       formData.append('screenshot', {
         uri: screenshotUri,
         type: type,
         name: filename,
       } as any);
       
-      console.log('💳 React Native FormData prepared:', {
+      console.log('💳 React Native FormData prepared for payment upload:', {
         fieldName: 'screenshot',
         uri: screenshotUri.substring(0, 50) + '...',
         type,
@@ -192,60 +190,130 @@ export const paymentsAPI = {
     }
 
     // Make request with multipart/form-data
-    // DO NOT set Content-Type header manually - axios will set it with boundary
+    if (isWeb) {
+      // 🌐 Web: use axios (already working)
+      try {
+        console.log('💳 Sending payment submission request to:', '/payments');
+        console.log('💳 Request URL will be:', API_BASE_URL + '/payments');
+        
+        const response = await apiClient.post('/payments', formData, {
+          timeout: 60000, // 60 seconds timeout for file uploads
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+          headers: {},
+        });
+        
+        console.log('✅ Payment submission successful:', {
+          success: response.data?.success,
+          message: response.data?.message,
+          paymentId: response.data?.payment?.id,
+          ticketStatus: response.data?.ticket?.status,
+        });
+        
+        return response.data;
+      } catch (error: any) {
+        console.error('❌ Payment submission failed:', {
+          message: error.message,
+          code: error.code,
+          response: error.response?.data,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          requestUrl: error.config?.url,
+          requestMethod: error.config?.method,
+        });
+        
+        // Provide user-friendly error messages
+        if (error.code === 'ERR_NETWORK' || error.message?.includes('Network')) {
+          throw new Error('Network error. Please check your internet connection and ensure the backend server is running.');
+        }
+        if (error.response?.status === 400) {
+          throw new Error(error.response.data?.message || 'Invalid payment data. Please check your ticket and try again.');
+        }
+        if (error.response?.status === 403) {
+          throw new Error(error.response.data?.message || 'Access denied. This ticket does not belong to you.');
+        }
+        if (error.response?.status === 404) {
+          throw new Error(error.response.data?.message || 'Ticket not found.');
+        }
+        if (error.response?.status === 413) {
+          throw new Error('Screenshot file is too large. Maximum size is 5MB.');
+        }
+        if (error.response?.status === 401) {
+          throw new Error('Authentication required. Please login again.');
+        }
+        
+        throw error;
+      }
+    }
+
+    // 📱 React Native: use fetch instead of axios
     try {
-      console.log('💳 Sending payment submission request to:', '/payments');
-      console.log('💳 Request URL will be:', API_BASE_URL + '/payments');
-      
-      const response = await apiClient.post('/payments', formData, {
-        timeout: 60000, // 60 seconds timeout for file uploads
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-        // Let axios handle Content-Type automatically for FormData
+      const accessToken = await getAccessToken();
+      const url = `${API_BASE_URL}/payments`;
+
+      console.log('📤 [RN] Sending payment upload request via fetch to:', url);
+
+      const response = await fetch(url, {
+        method: 'POST',
         headers: {
-          // Explicitly remove any Content-Type to let axios set it with boundary
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          // Do NOT set Content-Type; RN will set multipart boundary automatically
         },
+        body: formData as any,
       });
-      
-      console.log('✅ Payment submission successful:', {
-        success: response.data?.success,
-        message: response.data?.message,
-        paymentId: response.data?.payment?.id,
-        ticketStatus: response.data?.ticket?.status,
+
+      const responseText = await response.text();
+      let data: any = null;
+
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        console.warn('⚠️ [RN] Failed to parse JSON response for payment upload, raw text:', responseText);
+        throw new Error('Unexpected response from server while uploading payment screenshot.');
+      }
+
+      if (!response.ok) {
+        console.error('❌ [RN] Payment upload HTTP error:', {
+          status: response.status,
+          body: data,
+        });
+
+        if (response.status === 400) {
+          throw new Error(data?.message || 'Invalid payment data. Please check your ticket and try again.');
+        }
+        if (response.status === 403) {
+          throw new Error(data?.message || 'Access denied. This ticket does not belong to you.');
+        }
+        if (response.status === 404) {
+          throw new Error(data?.message || 'Ticket not found.');
+        }
+        if (response.status === 413) {
+          throw new Error('Screenshot file is too large. Maximum size is 5MB.');
+        }
+        if (response.status === 401) {
+          throw new Error('Authentication required. Please login again.');
+        }
+
+        throw new Error(data?.message || `Payment upload failed with status ${response.status}`);
+      }
+
+      console.log('✅ [RN] Payment upload successful:', {
+        success: data?.success,
+        message: data?.message,
+        paymentId: data?.payment?.id,
+        ticketStatus: data?.ticket?.status,
       });
-      
-      return response.data;
+
+      return data;
     } catch (error: any) {
-      console.error('❌ Payment submission failed:', {
-        message: error.message,
-        code: error.code,
-        response: error.response?.data,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        requestUrl: error.config?.url,
-        requestMethod: error.config?.method,
+      console.error('❌ [RN] Payment upload failed via fetch:', {
+        message: error?.message,
       });
-      
-      // Provide user-friendly error messages
-      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network')) {
+
+      if (error?.message?.includes('Network request failed')) {
         throw new Error('Network error. Please check your internet connection and ensure the backend server is running.');
       }
-      if (error.response?.status === 400) {
-        throw new Error(error.response.data?.message || 'Invalid payment data. Please check your ticket and try again.');
-      }
-      if (error.response?.status === 403) {
-        throw new Error(error.response.data?.message || 'Access denied. This ticket does not belong to you.');
-      }
-      if (error.response?.status === 404) {
-        throw new Error(error.response.data?.message || 'Ticket not found.');
-      }
-      if (error.response?.status === 413) {
-        throw new Error('Screenshot file is too large. Maximum size is 5MB.');
-      }
-      if (error.response?.status === 401) {
-        throw new Error('Authentication required. Please login again.');
-      }
-      
+
       throw error;
     }
   },

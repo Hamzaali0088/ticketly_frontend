@@ -74,7 +74,7 @@ export default function ProfileScreen() {
   // Calculate bottom padding: tab bar height + safe area bottom + extra padding
   // Tab bar layout: iOS height=90 (includes paddingBottom=30), Android height=75 + paddingBottom + marginBottom=10
   // Total space from bottom: iOS = 90 + insets.bottom, Android = 75 + max(insets.bottom, 50) + 10 + insets.bottom
-  const tabBarTotalHeight = Platform.OS === 'ios' 
+  const tabBarTotalHeight = Platform.OS === 'ios'
     ? 90 + insets.bottom // iOS: height includes padding, add safe area
     : 75 + Math.max(insets.bottom, 50) + 10 + insets.bottom; // Android: height + paddingBottom + marginBottom + safe area
   const bottomPadding = tabBarTotalHeight + 20; // Extra 20px for comfortable spacing
@@ -104,8 +104,7 @@ export default function ProfileScreen() {
             return `${baseUrl}${path}`;
           }
         }
-      }
-
+      } ``
       return user.profileImageUrl;
     }
 
@@ -113,7 +112,7 @@ export default function ProfileScreen() {
     if (user.profileImage.startsWith('http')) {
       return user.profileImage;
     }
-    
+
     // Remove /api from API_BASE_URL if present, then add profileImage
     const baseUrl = API_BASE_URL.replace('/api', '');
     return `${baseUrl}${user.profileImage}`;
@@ -140,7 +139,7 @@ export default function ProfileScreen() {
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
         const imageUri = asset.uri;
-        
+
         // Log asset info for debugging
         console.log('📸 Image selected:', {
           uri: imageUri.substring(0, 50) + '...',
@@ -149,7 +148,7 @@ export default function ProfileScreen() {
           height: asset.height,
           fileSize: asset.fileSize,
         });
-        
+
         await uploadProfileImage(imageUri);
       }
     } catch (error: any) {
@@ -164,10 +163,10 @@ export default function ProfileScreen() {
     try {
       console.log('🔄 Starting profile image upload...');
       const response = await authAPI.uploadProfileImage(imageUri);
-      
+
       if (response.success) {
         console.log('✅ Profile image upload successful:', response.profileImage);
-        
+
         // Update user state with new profile image
         if (response.user) {
           setUser(response.user);
@@ -179,7 +178,7 @@ export default function ProfileScreen() {
             profileImageUrl: response.profileImageUrl || response.profileImage,
           });
         }
-        
+
         Alert.alert('Success', 'Profile image uploaded successfully!');
       } else {
         console.error('❌ Upload failed - response not successful:', response);

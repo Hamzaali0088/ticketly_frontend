@@ -38,9 +38,10 @@ export interface Ticket {
   username: string;
   email: string;
   phone: string;
-  status: 'pending_payment' | 'payment_submitted' | 'confirmed' | 'used' | 'cancelled';
+  status: 'pending_payment' | 'payment_in_review' | 'confirmed' | 'used' | 'cancelled';
   accessKey?: string;
   qrCodeUrl?: string;
+  paymentScreenshotUrl?: string;
   createdAt: string;
   updatedAt: string;
   scannedAt?: string;

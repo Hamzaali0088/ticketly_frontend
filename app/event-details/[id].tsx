@@ -431,7 +431,7 @@ export default function EventDetailsScreen() {
                       icon: 'schedule',
                       label: 'Pending'
                     };
-                  case 'payment_submitted':
+                  case 'payment_in_review':
                     return {
                       bgColor: 'bg-[#3B82F6]/20',
                       borderColor: 'border-[#3B82F6]/50',

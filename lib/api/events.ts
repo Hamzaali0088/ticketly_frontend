@@ -1,6 +1,7 @@
 import apiClient from './client';
 import { Platform } from 'react-native';
 import { API_BASE_URL } from '../config';
+import { getAccessToken } from './client';
 
 export interface Event {
   _id: string;
@@ -239,73 +240,126 @@ export const eventsAPI = {
         throw new Error('Failed to process image for upload: ' + (error instanceof Error ? error.message : 'Unknown error'));
       }
     } else {
-      console.log('📱 Using REACT NATIVE upload path');
-      // React Native environment
-      // CRITICAL: FormData structure for React Native must use this exact format
-      // The field name 'image' must match Multer's field name in backend
-      // uri must be a valid file:// or content:// URI from expo-image-picker
+      // 📱 React Native environment — use fetch instead of axios to avoid RN axios/FormData issues
       formData.append('image', {
         uri: imageUri,
         type: type,
         name: filename,
       } as any);
       
-      console.log('📱 React Native FormData prepared:', { 
+      console.log('📱 React Native FormData prepared for event upload:', { 
         fieldName: 'image',
         uri: imageUri.substring(0, 50) + '...', 
         type, 
         name: filename 
       });
     }
-    
-    // Final check before sending
-    console.log('Final FormData check:', {
-      isFormData: formData instanceof FormData,
-      formDataKeys: formData.constructor.name
-    });
 
     // Make request with multipart/form-data
-    // DO NOT set Content-Type header manually - axios will set it with boundary
-    console.log('📤 Sending upload request to:', '/events/upload-image');
-    console.log('📤 Request URL will be:', API_BASE_URL + '/events/upload-image');
+    if (isWeb) {
+      // 🌐 Web: use axios (already working)
+      try {
+        console.log('📤 Sending event image upload request to:', '/events/upload-image');
+        console.log('📤 Request URL will be:', API_BASE_URL + '/events/upload-image');
+        
+        const response = await apiClient.post('/events/upload-image', formData, {
+          timeout: 60000, // 60 seconds timeout for file uploads
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+          headers: {},
+        });
+        
+        console.log('✅ Event image upload successful:', {
+          success: response.data?.success,
+          message: response.data?.message,
+          imageUrl: response.data?.imageUrl
+        });
+        
+        return response.data;
+      } catch (error: any) {
+        console.error('❌ Event image upload failed:', {
+          message: error.message,
+          code: error.code,
+          response: error.response?.data,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          requestUrl: error.config?.url,
+          requestMethod: error.config?.method,
+        });
+        
+        // Provide user-friendly error messages
+        if (error.code === 'ERR_NETWORK' || error.message?.includes('Network')) {
+          throw new Error('Network error. Please check your internet connection and ensure the backend server is running.');
+        }
+        if (error.response?.status === 400) {
+          throw new Error(error.response.data?.message || 'Invalid image file. Please try a different image.');
+        }
+        if (error.response?.status === 413) {
+          throw new Error('Image file is too large. Maximum size is 5MB.');
+        }
+        
+        throw error;
+      }
+    }
+
+    // 📱 React Native: use fetch instead of axios
     try {
-      const response = await apiClient.post('/events/upload-image', formData, {
-        timeout: 60000, // 60 seconds timeout for file uploads
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-        // Let axios handle Content-Type automatically for FormData
+      const accessToken = await getAccessToken();
+      const url = `${API_BASE_URL}/events/upload-image`;
+
+      console.log('📤 [RN] Sending event image upload request via fetch to:', url);
+
+      const response = await fetch(url, {
+        method: 'POST',
         headers: {
-          // Explicitly remove any Content-Type to let axios set it with boundary
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          // Do NOT set Content-Type; RN will set multipart boundary automatically
         },
+        body: formData as any,
       });
-      console.log('✅ Upload response received:', {
-        success: response.data?.success,
-        message: response.data?.message,
-        imageUrl: response.data?.imageUrl
+
+      const responseText = await response.text();
+      let data: any = null;
+
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        console.warn('⚠️ [RN] Failed to parse JSON response for event image upload, raw text:', responseText);
+        throw new Error('Unexpected response from server while uploading event image.');
+      }
+
+      if (!response.ok) {
+        console.error('❌ [RN] Event image upload HTTP error:', {
+          status: response.status,
+          body: data,
+        });
+
+        if (response.status === 400) {
+          throw new Error(data?.message || 'Invalid image file. Please try a different image.');
+        }
+        if (response.status === 413) {
+          throw new Error('Image file is too large. Maximum size is 5MB.');
+        }
+
+        throw new Error(data?.message || `Event image upload failed with status ${response.status}`);
+      }
+
+      console.log('✅ [RN] Event image upload successful:', {
+        success: data?.success,
+        message: data?.message,
+        imageUrl: data?.imageUrl,
       });
-      return response.data;
+
+      return data;
     } catch (error: any) {
-      console.error('❌ Upload request failed:', {
-        message: error.message,
-        code: error.code,
-        response: error.response?.data,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        requestUrl: error.config?.url,
-        requestMethod: error.config?.method,
+      console.error('❌ [RN] Event image upload failed via fetch:', {
+        message: error?.message,
       });
-      
-      // Provide user-friendly error messages
-      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network')) {
+
+      if (error?.message?.includes('Network request failed')) {
         throw new Error('Network error. Please check your internet connection and ensure the backend server is running.');
       }
-      if (error.response?.status === 400) {
-        throw new Error(error.response.data?.message || 'Invalid image file. Please try a different image.');
-      }
-      if (error.response?.status === 413) {
-        throw new Error('Image file is too large. Maximum size is 5MB.');
-      }
-      
+
       throw error;
     }
   },

@@ -14,20 +14,64 @@ import { ticketsAPI, type Ticket } from '@/lib/api/tickets';
 import { paymentsAPI } from '@/lib/api/payments';
 import * as ImagePicker from 'expo-image-picker';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { API_BASE_URL } from '@/lib/config';
 
 export default function TicketScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useAppStore((state) => state.user);
-  
+
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Payment upload states
   const [screenshotUri, setScreenshotUri] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string>('bank_transfer');
   const [uploadingPayment, setUploadingPayment] = useState(false);
+
+  // Helper function to get full payment screenshot URL (same logic as profile image)
+  const getPaymentScreenshotUrl = () => {
+    // If user has selected a new screenshot (local URI), use it
+    if (screenshotUri && (screenshotUri.startsWith('file://') || screenshotUri.startsWith('content://'))) {
+      return screenshotUri;
+    }
+
+    // Otherwise, use the payment screenshot URL from ticket
+    if (!ticket?.paymentScreenshotUrl) return null;
+
+    const paymentScreenshotUrl = ticket.paymentScreenshotUrl;
+
+    // If backend returned a localhost URL (old data), rewrite it to use the current API base URL
+    if (
+      paymentScreenshotUrl.includes('localhost') ||
+      paymentScreenshotUrl.includes('127.0.0.1')
+    ) {
+      // Strip `/api` from API_BASE_URL and keep only the path part from the original URL
+      const baseUrl = API_BASE_URL.replace('/api', '');
+      try {
+        const url = new URL(paymentScreenshotUrl);
+        const path = url.pathname || '';
+        return `${baseUrl}${path}`;
+      } catch {
+        // Fallback: if URL parsing fails, try to find `/uploads` in the string
+        const uploadsIndex = paymentScreenshotUrl.indexOf('/uploads');
+        if (uploadsIndex !== -1) {
+          const path = paymentScreenshotUrl.substring(uploadsIndex);
+          return `${baseUrl}${path}`;
+        }
+      }
+    }
+
+    // If it's already a full URL, return it as is
+    if (paymentScreenshotUrl.startsWith('http')) {
+      return paymentScreenshotUrl;
+    }
+
+    // Otherwise, construct from relative path and API_BASE_URL
+    const baseUrl = API_BASE_URL.replace('/api', '');
+    return `${baseUrl}${paymentScreenshotUrl}`;
+  };
 
   useEffect(() => {
     const fetchTicket = async () => {
@@ -41,7 +85,7 @@ export default function TicketScreen() {
         setLoading(true);
         setError(null);
         const response = await ticketsAPI.getTicketById(id);
-        
+
         if (response.success && response.ticket) {
           console.log('📋 Ticket data received:', {
             hasEvent: !!response.ticket.event,
@@ -49,8 +93,11 @@ export default function TicketScreen() {
             createdByPhone: response.ticket.event?.createdBy?.phone,
             eventPhone: response.ticket.event?.phone,
             organizerPhone: response.ticket.organizer?.phone,
+            paymentScreenshotUrl: response.ticket.paymentScreenshotUrl,
           });
           setTicket(response.ticket);
+          // Don't set screenshotUri from ticket - let getPaymentScreenshotUrl() handle it
+          // This ensures we use the same logic as profile image (prefer URL, handle localhost, etc.)
         } else {
           setError('Ticket not found');
         }
@@ -96,7 +143,8 @@ export default function TicketScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [16, 9],
+        // Use 3:4 aspect ratio for payment screenshots (taller images)
+        aspect: [3, 4],
         quality: 0.8,
       });
 
@@ -138,7 +186,7 @@ export default function TicketScreen() {
 
     try {
       setUploadingPayment(true);
-      
+
       // Amount is derived from ticket.event.ticketPrice on backend (source of truth)
       const response = await paymentsAPI.submitPayment(
         ticket.id,
@@ -148,16 +196,16 @@ export default function TicketScreen() {
 
       if (response.success) {
         console.log('✅ Payment submitted successfully:', response);
-        
+
         // Clear screenshot selection
         setScreenshotUri(null);
-        
+
         // Refresh ticket to get updated status
         await refreshTicket();
-        
+
         Alert.alert(
-          'Payment Submitted',
-          'Your payment has been submitted successfully. Please wait for admin verification. Your ticket status will be updated once approved.',
+          'Screenshot Updated',
+          'Your payment screenshot has been updated successfully. Your ticket is in review and our team will verify it within 24-48 hours.',
           [
             {
               text: 'OK',
@@ -241,7 +289,7 @@ export default function TicketScreen() {
         return '#10B981';
       case 'pending_payment':
         return '#F59E0B';
-      case 'payment_submitted':
+      case 'payment_in_review':
         return '#3B82F6'; // Blue for "waiting for approval"
       case 'used':
         return '#6B7280';
@@ -255,10 +303,10 @@ export default function TicketScreen() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return 'Submitted';
+        return 'Confirmed';
       case 'pending_payment':
         return 'Pending';
-      case 'payment_submitted':
+      case 'payment_in_review':
         return 'In Review';
       case 'used':
         return 'Used';
@@ -308,11 +356,11 @@ export default function TicketScreen() {
 
         {/* Event Image */}
         {ticket.event?.image && (
-        <Image
+          <Image
             source={{ uri: ticket.event.image }}
             className="w-full h-[200px] mt-3"
-          resizeMode="cover"
-        />
+            resizeMode="cover"
+          />
         )}
 
         {/* Event Info */}
@@ -325,22 +373,22 @@ export default function TicketScreen() {
           )}
 
           {ticket.event?.date && (
-          <View className="flex-row mb-4 items-start">
-            <MaterialIcons name="calendar-today" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
-            <View className="flex-1">
-              <Text className="text-[#9CA3AF] text-xs mb-1">Date</Text>
-              <Text className="text-white text-sm mb-0.5">
+            <View className="flex-row mb-4 items-start">
+              <MaterialIcons name="calendar-today" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+              <View className="flex-1">
+                <Text className="text-[#9CA3AF] text-xs mb-1">Date</Text>
+                <Text className="text-white text-sm mb-0.5">
                   {formatDate(ticket.event.date)} {ticket.event.time && `at ${ticket.event.time}`}
-              </Text>
+                </Text>
+              </View>
             </View>
-          </View>
           )}
 
           {ticket.event?.location && (
-          <View className="flex-row mb-4 items-start">
-            <MaterialIcons name="location-on" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
-            <View className="flex-1">
-              <Text className="text-[#9CA3AF] text-xs mb-1">Venue</Text>
+            <View className="flex-row mb-4 items-start">
+              <MaterialIcons name="location-on" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+              <View className="flex-1">
+                <Text className="text-[#9CA3AF] text-xs mb-1">Venue</Text>
                 <Text className="text-white text-sm mb-0.5">{ticket.event.location}</Text>
               </View>
             </View>
@@ -354,8 +402,8 @@ export default function TicketScreen() {
                 <Text className="text-white text-sm mb-0.5">
                   PKR {ticket.event.ticketPrice.toLocaleString()}
                 </Text>
+              </View>
             </View>
-          </View>
           )}
 
           <View className="flex-row mb-4 items-start">
@@ -373,8 +421,8 @@ export default function TicketScreen() {
 
         {/* QR Code Section */}
         {ticket.status === 'confirmed' && (
-        <View className="p-5 border-t border-[#374151] items-center">
-          <Text className="text-white text-base font-semibold mb-4">Scan QR Code at Entry</Text>
+          <View className="p-5 border-t border-[#374151] items-center">
+            <Text className="text-white text-base font-semibold mb-4">Scan QR Code at Entry</Text>
             {ticket.qrCodeUrl ? (
               <View className="bg-white p-5 rounded-xl mb-3">
                 <Image
@@ -384,29 +432,154 @@ export default function TicketScreen() {
                 />
               </View>
             ) : ticket.accessKey ? (
-          <View className="bg-white p-5 rounded-xl mb-3">
-            <View className="w-[200px] h-[200px] bg-[#F3F4F6] items-center justify-center rounded-lg">
+              <View className="bg-white p-5 rounded-xl mb-3">
+                <View className="w-[200px] h-[200px] bg-[#F3F4F6] items-center justify-center rounded-lg">
                   <Text className="text-[#6B7280] text-base font-bold mb-2">Access Key</Text>
                   <Text className="text-[#9CA3AF] text-[10px] text-center px-2.5 font-mono">
                     {ticket.accessKey}
                   </Text>
-            </View>
-          </View>
+                </View>
+              </View>
             ) : null}
-          <Text className="text-[#9CA3AF] text-xs text-center">
-            Please arrive 15 minutes before the event starts
-          </Text>
-        </View>
+            <Text className="text-[#9CA3AF] text-xs text-center">
+              Please arrive 15 minutes before the event starts
+            </Text>
+          </View>
         )}
 
-        {ticket.status === 'payment_submitted' && (
-          <View className="p-5 border-t border-[#374151] items-center">
-            <Text className="text-[#3B82F6] text-base font-semibold mb-2">
-              Payment Submitted
-            </Text>
-            <Text className="text-[#9CA3AF] text-sm text-center">
-              Your payment screenshot has been submitted successfully. Please wait for admin verification. You will receive a notification once your payment is approved.
-            </Text>
+        {ticket.status === 'payment_in_review' && (
+          <View className="p-5 border-t border-[#374151]">
+            <View className="items-center mb-4">
+              <Text className="text-[#3B82F6] text-base font-semibold mb-2">
+                In Review
+              </Text>
+              <Text className="text-[#9CA3AF] text-sm text-center mb-1">
+                Your payment screenshot has been submitted successfully.
+              </Text>
+              <Text className="text-[#9CA3AF] text-sm text-center mb-1">
+                Our team will verify your payment within 24-48 hours.
+              </Text>
+              <Text className="text-[#9CA3AF] text-sm text-center">
+                You can update the screenshot until verification is complete.
+              </Text>
+            </View>
+
+            {/* Payment Method Selection */}
+            <View className="mb-4">
+              <Text className="text-[#9CA3AF] text-xs mb-2">Payment Method</Text>
+              <View className="flex-row gap-2">
+                {['bank_transfer', 'easypaisa', 'jazzcash', 'other'].map((method) => (
+                  <TouchableOpacity
+                    key={method}
+                    onPress={() => setPaymentMethod(method)}
+                    className={`px-3 py-2 rounded-lg border ${paymentMethod === method
+                      ? 'bg-[#9333EA] border-[#9333EA]'
+                      : 'bg-[#1F1F1F] border-[#374151]'
+                      }`}
+                  >
+                    <Text
+                      className={`text-xs font-semibold ${paymentMethod === method ? 'text-white' : 'text-[#9CA3AF]'
+                        }`}
+                    >
+                      {method === 'bank_transfer'
+                        ? 'Bank'
+                        : method === 'easypaisa'
+                          ? 'EasyPaisa'
+                          : method === 'jazzcash'
+                            ? 'JazzCash'
+                            : 'Other'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {/* Event Creator Phone Number */}
+              {(() => {
+                const phoneNumber = ticket.event?.createdBy?.phone || ticket.event?.phone || ticket.organizer?.phone;
+                return phoneNumber ? (
+                  <View className="mt-3">
+                    <Text className="text-[#9CA3AF] text-xs mb-1">
+                      Send payment to: {phoneNumber}
+                    </Text>
+                  </View>
+                ) : null;
+              })()}
+            </View>
+
+            {/* Screenshot Display/Update */}
+            <View className="mb-4">
+              <Text className="text-[#9CA3AF] text-xs mb-2">Payment Screenshot</Text>
+              {getPaymentScreenshotUrl() ? (
+                <View className="relative">
+                  <Image
+                    source={{ uri: getPaymentScreenshotUrl()! }}
+                    className="w-full h-[200px] rounded-xl"
+                    resizeMode="cover"
+                  />
+                  <TouchableOpacity
+                    onPress={() => setScreenshotUri(null)}
+                    className="absolute top-2 right-2 bg-[#EF4444] p-2 rounded-full"
+                  >
+                    <MaterialIcons name="close" size={20} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={pickScreenshot}
+                    className="absolute bottom-2 right-2 bg-[#9333EA] px-3 py-1.5 rounded-lg flex-row items-center"
+                  >
+                    <MaterialIcons name="edit" size={16} color="#FFFFFF" />
+                    <Text className="text-white text-xs font-semibold ml-1">Update</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  onPress={pickScreenshot}
+                  className="border-2 border-dashed border-[#374151] rounded-xl p-8 items-center justify-center bg-[#0F0F0F]"
+                >
+                  <MaterialIcons name="add-photo-alternate" size={48} color="#9CA3AF" />
+                  <Text className="text-[#9CA3AF] text-sm mt-2 text-center">
+                    Tap to select payment screenshot
+                  </Text>
+                  <Text className="text-[#6B7280] text-xs mt-1 text-center">
+                    JPEG, PNG, GIF, or WebP (Max 5MB)
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Update Button */}
+            <TouchableOpacity
+              onPress={() => {
+                if (!screenshotUri) {
+                  Alert.alert('Screenshot Required', 'Please select a payment screenshot first.');
+                  return;
+                }
+                if (uploadingPayment) {
+                  return;
+                }
+                handleSubmitPayment();
+              }}
+              disabled={uploadingPayment || !screenshotUri}
+              activeOpacity={0.7}
+              style={{
+                opacity: !screenshotUri || uploadingPayment ? 0.5 : 1,
+              }}
+              className={`py-4 rounded-xl items-center ${!screenshotUri || uploadingPayment
+                ? 'bg-[#374151]'
+                : 'bg-[#9333EA]'
+                }`}
+            >
+              {uploadingPayment ? (
+                <View className="flex-row items-center">
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text className="text-white text-base font-semibold ml-2">
+                    Updating...
+                  </Text>
+                </View>
+              ) : (
+                <Text className="text-white text-base font-semibold">
+                  Update Screenshot
+                </Text>
+              )}
+            </TouchableOpacity>
           </View>
         )}
 
@@ -427,24 +600,22 @@ export default function TicketScreen() {
                   <TouchableOpacity
                     key={method}
                     onPress={() => setPaymentMethod(method)}
-                    className={`px-3 py-2 rounded-lg border ${
-                      paymentMethod === method
-                        ? 'bg-[#9333EA] border-[#9333EA]'
-                        : 'bg-[#1F1F1F] border-[#374151]'
-                    }`}
+                    className={`px-3 py-2 rounded-lg border ${paymentMethod === method
+                      ? 'bg-[#9333EA] border-[#9333EA]'
+                      : 'bg-[#1F1F1F] border-[#374151]'
+                      }`}
                   >
                     <Text
-                      className={`text-xs font-semibold ${
-                        paymentMethod === method ? 'text-white' : 'text-[#9CA3AF]'
-                      }`}
+                      className={`text-xs font-semibold ${paymentMethod === method ? 'text-white' : 'text-[#9CA3AF]'
+                        }`}
                     >
                       {method === 'bank_transfer'
                         ? 'Bank'
                         : method === 'easypaisa'
-                        ? 'EasyPaisa'
-                        : method === 'jazzcash'
-                        ? 'JazzCash'
-                        : 'Other'}
+                          ? 'EasyPaisa'
+                          : method === 'jazzcash'
+                            ? 'JazzCash'
+                            : 'Other'}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -519,11 +690,10 @@ export default function TicketScreen() {
               style={{
                 opacity: !screenshotUri || uploadingPayment ? 0.5 : 1,
               }}
-              className={`py-4 rounded-xl items-center ${
-                !screenshotUri || uploadingPayment
-                  ? 'bg-[#374151]'
-                  : 'bg-[#9333EA]'
-              }`}
+              className={`py-4 rounded-xl items-center ${!screenshotUri || uploadingPayment
+                ? 'bg-[#374151]'
+                : 'bg-[#9333EA]'
+                }`}
             >
               {uploadingPayment ? (
                 <View className="flex-row items-center">
@@ -554,24 +724,24 @@ export default function TicketScreen() {
 
       {/* Actions */}
       {ticket.status === 'confirmed' && (
-      <View className="flex-row gap-3 px-5">
-        <TouchableOpacity
-          className="flex-1 bg-[#9333EA] py-4 rounded-xl items-center"
-          onPress={() => {
+        <View className="flex-row gap-3 px-5">
+          <TouchableOpacity
+            className="flex-1 bg-[#9333EA] py-4 rounded-xl items-center"
+            onPress={() => {
               Alert.alert('Download', 'Ticket download feature coming soon!');
-          }}
-        >
-          <Text className="text-white text-base font-semibold">Download Ticket</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          className="flex-1 bg-[#1F1F1F] border border-[#374151] py-4 rounded-xl items-center"
-          onPress={() => {
+            }}
+          >
+            <Text className="text-white text-base font-semibold">Download Ticket</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="flex-1 bg-[#1F1F1F] border border-[#374151] py-4 rounded-xl items-center"
+            onPress={() => {
               Alert.alert('Share', 'Ticket sharing feature coming soon!');
-          }}
-        >
-          <Text className="text-white text-base font-semibold">Share</Text>
-        </TouchableOpacity>
-      </View>
+            }}
+          >
+            <Text className="text-white text-base font-semibold">Share</Text>
+          </TouchableOpacity>
+        </View>
       )}
     </ScrollView>
   );
