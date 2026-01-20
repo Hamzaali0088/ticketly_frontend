@@ -8,16 +8,25 @@
     "scheme": "bookingapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true
-    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.hamza0088.bookingapp"
+      "package": "com.hamza0088.bookingapp",
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ]
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "We need access to your photos to upload profile and event images.",
+        "NSPhotoLibraryAddUsageDescription": "We need access to save images to your photo library."
+      }
     },
     "web": {
       "bundler": "metro",
@@ -33,6 +42,13 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to upload profile and event images.",
+          "cameraPermission": "The app accesses your camera to take photos for events."
         }
       ]
     ],

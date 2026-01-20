@@ -10,7 +10,7 @@ const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   // Don't set default Content-Type here - let the interceptor handle it
   // This prevents issues with FormData uploads
-  timeout: 30000, // 30 seconds timeout (reduced for faster failure detection)
+  timeout: 60000, // 60 seconds timeout (file uploads need more time)
   // IMPORTANT:
   // Do NOT override validateStatus here. We want 401 responses to be treated
   // as errors so the response interceptor can trigger the refresh-token flow.

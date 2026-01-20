@@ -16,7 +16,9 @@ import {
   NativeSyntheticEvent,
   Animated,
   Easing,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Event } from '@/lib/api/events';
 
 const { width } = Dimensions.get('window');
@@ -48,6 +50,7 @@ export default function HomeScreen() {
   const user = useAppStore((state) => state.user);
   const isAuthenticated = useAppStore((state) => state.isAuthenticated);
   const setEvents = useAppStore((state) => state.setEvents);
+  const insets = useSafeAreaInsets();
   const [featuredEvents, setFeaturedEvents] = useState<any[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +58,14 @@ export default function HomeScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
   const animatedScales = useRef<Animated.Value[]>([]);
+
+  // Calculate bottom padding: tab bar height + safe area bottom + extra padding
+  // Tab bar layout: iOS height=90 (includes paddingBottom=30), Android height=75 + paddingBottom + marginBottom=10
+  // Total space from bottom: iOS = 90 + insets.bottom, Android = 75 + max(insets.bottom, 50) + 10 + insets.bottom
+  const tabBarTotalHeight = Platform.OS === 'ios' 
+    ? 90 + insets.bottom // iOS: height includes padding, add safe area
+    : 75 + Math.max(insets.bottom, 50) + 10 + insets.bottom; // Android: height + paddingBottom + marginBottom + safe area
+  const bottomPadding = tabBarTotalHeight + 20; // Extra 20px for comfortable spacing
 
   useEffect(() => {
     // Load events on mount - no authentication required
@@ -98,7 +109,7 @@ export default function HomeScreen() {
     <View className="flex-1 bg-[#0F0F0F]">
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: bottomPadding }}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}

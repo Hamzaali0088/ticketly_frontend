@@ -194,17 +194,33 @@ export const authAPI = {
       : FormData;
     const formData = new FormDataConstructor();
     
-    // Extract filename from URI
-    let filename = imageUri.split('/').pop() || 'image.jpg';
-    filename = filename.split('?')[0];
+    // Extract filename and MIME type from URI
+    // CRITICAL: React Native URIs can be file:// or content://
+    // content:// URIs don't have filenames, so we need a fallback
+    let filename = 'image.jpg'; // default
+    let type = 'image/jpeg'; // default
+    
+    // Try to extract filename from URI
+    if (imageUri.includes('/')) {
+      const uriParts = imageUri.split('/');
+      const lastPart = uriParts[uriParts.length - 1];
+      if (lastPart && lastPart.includes('.')) {
+        filename = lastPart.split('?')[0]; // Remove query params
+      }
+    }
     
     // Determine MIME type from file extension
-    let type = 'image/jpeg'; // default
+    // This is a fallback - ideally use type from expo-image-picker asset
     const ext = filename.split('.').pop()?.toLowerCase();
     if (ext === 'png') type = 'image/png';
     else if (ext === 'gif') type = 'image/gif';
     else if (ext === 'webp') type = 'image/webp';
     else if (ext === 'jpg' || ext === 'jpeg') type = 'image/jpeg';
+    
+    // For content:// URIs on Android, generate a proper filename
+    if (imageUri.startsWith('content://')) {
+      filename = `image_${Date.now()}.${ext || 'jpg'}`;
+    }
     
     if (isWeb) {
       // Web browser environment
@@ -261,21 +277,66 @@ export const authAPI = {
       }
     } else {
       // React Native environment
+      // CRITICAL: FormData structure for React Native must use this exact format
+      // The field name 'image' must match Multer's field name in backend
+      // uri must be a valid file:// or content:// URI from expo-image-picker
       formData.append('image', {
         uri: imageUri,
         type: type,
         name: filename,
       } as any);
+      
+      console.log('📱 React Native FormData prepared:', {
+        fieldName: 'image',
+        uri: imageUri.substring(0, 50) + '...',
+        type,
+        name: filename,
+      });
     }
 
     // Make request with multipart/form-data
-    const response = await apiClient.post('/auth/upload-profile-image', formData, {
-      timeout: 60000, // 60 seconds timeout for file uploads
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity,
-    });
-    
-    return response.data;
+    // DO NOT set Content-Type header manually - axios will set it with boundary
+    try {
+      console.log('📤 Sending upload request to:', '/auth/upload-profile-image');
+      const response = await apiClient.post('/auth/upload-profile-image', formData, {
+        timeout: 60000, // 60 seconds timeout for file uploads
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        // Let axios handle Content-Type automatically for FormData
+        headers: {
+          // Explicitly remove any Content-Type to let axios set it with boundary
+        },
+      });
+      
+      console.log('✅ Upload successful:', {
+        success: response.data?.success,
+        profileImage: response.data?.profileImage,
+      });
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Upload failed:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status,
+        requestUrl: error.config?.url,
+        requestMethod: error.config?.method,
+      });
+      
+      // Provide user-friendly error messages
+      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network')) {
+        throw new Error('Network error. Please check your internet connection and ensure the backend server is running.');
+      }
+      if (error.response?.status === 400) {
+        throw new Error(error.response.data?.message || 'Invalid image file. Please try a different image.');
+      }
+      if (error.response?.status === 413) {
+        throw new Error('Image file is too large. Maximum size is 5MB.');
+      }
+      
+      throw error;
+    }
   },
 };
 

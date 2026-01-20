@@ -11,6 +11,8 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
 import { ticketsAPI, type Ticket } from '@/lib/api/tickets';
+import { paymentsAPI } from '@/lib/api/payments';
+import * as ImagePicker from 'expo-image-picker';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function TicketScreen() {
@@ -21,6 +23,11 @@ export default function TicketScreen() {
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Payment upload states
+  const [screenshotUri, setScreenshotUri] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string>('bank_transfer');
+  const [uploadingPayment, setUploadingPayment] = useState(false);
 
   useEffect(() => {
     const fetchTicket = async () => {
@@ -36,6 +43,13 @@ export default function TicketScreen() {
         const response = await ticketsAPI.getTicketById(id);
         
         if (response.success && response.ticket) {
+          console.log('📋 Ticket data received:', {
+            hasEvent: !!response.ticket.event,
+            hasCreatedBy: !!response.ticket.event?.createdBy,
+            createdByPhone: response.ticket.event?.createdBy?.phone,
+            eventPhone: response.ticket.event?.phone,
+            organizerPhone: response.ticket.organizer?.phone,
+          });
           setTicket(response.ticket);
         } else {
           setError('Ticket not found');
@@ -51,6 +65,122 @@ export default function TicketScreen() {
 
     fetchTicket();
   }, [id]);
+
+  // Refresh ticket after payment submission
+  const refreshTicket = async () => {
+    if (!id) return;
+    try {
+      const response = await ticketsAPI.getTicketById(id);
+      if (response.success && response.ticket) {
+        setTicket(response.ticket);
+      }
+    } catch (err) {
+      console.error('Error refreshing ticket:', err);
+    }
+  };
+
+  // Pick payment screenshot from gallery
+  const pickScreenshot = async () => {
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'We need access to your photos to upload payment screenshots.'
+        );
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setScreenshotUri(asset.uri);
+        console.log('💳 Screenshot selected:', {
+          uri: asset.uri.substring(0, 50) + '...',
+          type: asset.type,
+          width: asset.width,
+          height: asset.height,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error picking screenshot:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
+  // Submit payment with screenshot
+  const handleSubmitPayment = async () => {
+    // Minimal log for debugging
+    console.log('🔵 Submit payment:', {
+      ticketId: ticket?.id,
+      hasScreenshot: !!screenshotUri,
+    });
+
+    if (!ticket) {
+      console.error('❌ No ticket available');
+      Alert.alert('Error', 'Ticket information not available.');
+      return;
+    }
+
+    if (!screenshotUri) {
+      console.error('❌ No screenshot selected');
+      Alert.alert('Screenshot Required', 'Please select a payment screenshot to upload.');
+      return;
+    }
+
+    try {
+      setUploadingPayment(true);
+      
+      // Amount is derived from ticket.event.ticketPrice on backend (source of truth)
+      const response = await paymentsAPI.submitPayment(
+        ticket.id,
+        paymentMethod,
+        screenshotUri
+      );
+
+      if (response.success) {
+        console.log('✅ Payment submitted successfully:', response);
+        
+        // Clear screenshot selection
+        setScreenshotUri(null);
+        
+        // Refresh ticket to get updated status
+        await refreshTicket();
+        
+        Alert.alert(
+          'Payment Submitted',
+          'Your payment has been submitted successfully. Please wait for admin verification. Your ticket status will be updated once approved.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Optionally navigate back or stay on screen
+              },
+            },
+          ]
+        );
+      } else {
+        throw new Error(response.message || 'Payment submission failed');
+      }
+    } catch (error: any) {
+      console.error('❌ Payment submission error:', error);
+      const errorMessage =
+        error.message ||
+        error.response?.data?.message ||
+        'Failed to submit payment. Please try again.';
+      Alert.alert('Payment Submission Failed', errorMessage);
+    } finally {
+      setUploadingPayment(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -111,6 +241,8 @@ export default function TicketScreen() {
         return '#10B981';
       case 'pending_payment':
         return '#F59E0B';
+      case 'payment_submitted':
+        return '#3B82F6'; // Blue for "waiting for approval"
       case 'used':
         return '#6B7280';
       case 'cancelled':
@@ -126,6 +258,8 @@ export default function TicketScreen() {
         return 'Confirmed';
       case 'pending_payment':
         return 'Pending Payment';
+      case 'payment_submitted':
+        return 'Waiting for Approval';
       case 'used':
         return 'Used';
       case 'cancelled':
@@ -265,14 +399,145 @@ export default function TicketScreen() {
         </View>
         )}
 
-        {ticket.status === 'pending_payment' && (
+        {ticket.status === 'payment_submitted' && (
           <View className="p-5 border-t border-[#374151] items-center">
-            <Text className="text-[#F59E0B] text-base font-semibold mb-2">
-              Payment Pending
+            <Text className="text-[#3B82F6] text-base font-semibold mb-2">
+              Payment Submitted
             </Text>
             <Text className="text-[#9CA3AF] text-sm text-center">
-              Please complete payment to confirm your ticket and receive your QR code.
+              Your payment screenshot has been submitted successfully. Please wait for admin verification. You will receive a notification once your payment is approved.
             </Text>
+          </View>
+        )}
+
+        {ticket.status === 'pending_payment' && (
+          <View className="p-5 border-t border-[#374151]">
+            <Text className="text-[#F59E0B] text-base font-semibold mb-2 text-center">
+              Payment Pending
+            </Text>
+            <Text className="text-[#9CA3AF] text-sm text-center mb-4">
+              Please upload a screenshot of your payment to confirm your ticket.
+            </Text>
+
+            {/* Payment Method Selection */}
+            <View className="mb-4">
+              <Text className="text-[#9CA3AF] text-xs mb-2">Payment Method</Text>
+              <View className="flex-row gap-2">
+                {['bank_transfer', 'easypaisa', 'jazzcash', 'other'].map((method) => (
+                  <TouchableOpacity
+                    key={method}
+                    onPress={() => setPaymentMethod(method)}
+                    className={`px-3 py-2 rounded-lg border ${
+                      paymentMethod === method
+                        ? 'bg-[#9333EA] border-[#9333EA]'
+                        : 'bg-[#1F1F1F] border-[#374151]'
+                    }`}
+                  >
+                    <Text
+                      className={`text-xs font-semibold ${
+                        paymentMethod === method ? 'text-white' : 'text-[#9CA3AF]'
+                      }`}
+                    >
+                      {method === 'bank_transfer'
+                        ? 'Bank'
+                        : method === 'easypaisa'
+                        ? 'EasyPaisa'
+                        : method === 'jazzcash'
+                        ? 'JazzCash'
+                        : 'Other'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {/* Event Creator Phone Number */}
+              {(() => {
+                const phoneNumber = ticket.event?.createdBy?.phone || ticket.event?.phone || ticket.organizer?.phone;
+                return phoneNumber ? (
+                  <View className="mt-3">
+                    <Text className="text-[#9CA3AF] text-xs mb-1">
+                      Send payment to: {phoneNumber}
+                    </Text>
+                  </View>
+                ) : null;
+              })()}
+            </View>
+
+            {/* Screenshot Selection */}
+            <View className="mb-4">
+              <Text className="text-[#9CA3AF] text-xs mb-2">Payment Screenshot</Text>
+              {screenshotUri ? (
+                <View className="relative">
+                  <Image
+                    source={{ uri: screenshotUri }}
+                    className="w-full h-[200px] rounded-xl"
+                    resizeMode="cover"
+                  />
+                  <TouchableOpacity
+                    onPress={() => setScreenshotUri(null)}
+                    className="absolute top-2 right-2 bg-[#EF4444] p-2 rounded-full"
+                  >
+                    <MaterialIcons name="close" size={20} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  onPress={pickScreenshot}
+                  className="border-2 border-dashed border-[#374151] rounded-xl p-8 items-center justify-center bg-[#0F0F0F]"
+                >
+                  <MaterialIcons name="add-photo-alternate" size={48} color="#9CA3AF" />
+                  <Text className="text-[#9CA3AF] text-sm mt-2 text-center">
+                    Tap to select payment screenshot
+                  </Text>
+                  <Text className="text-[#6B7280] text-xs mt-1 text-center">
+                    JPEG, PNG, GIF, or WebP (Max 5MB)
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              onPress={() => {
+                console.log('🔵 TouchableOpacity onPress triggered');
+                console.log('🔵 Button state check:', {
+                  hasScreenshot: !!screenshotUri,
+                  isUploading: uploadingPayment,
+                  disabled: !screenshotUri || uploadingPayment,
+                });
+                if (!screenshotUri) {
+                  Alert.alert('Screenshot Required', 'Please select a payment screenshot first.');
+                  return;
+                }
+                if (uploadingPayment) {
+                  console.log('⚠️ Already uploading, ignoring click');
+                  return;
+                }
+                handleSubmitPayment();
+              }}
+              disabled={uploadingPayment}
+              activeOpacity={0.7}
+              style={{
+                opacity: !screenshotUri || uploadingPayment ? 0.5 : 1,
+              }}
+              className={`py-4 rounded-xl items-center ${
+                !screenshotUri || uploadingPayment
+                  ? 'bg-[#374151]'
+                  : 'bg-[#9333EA]'
+              }`}
+            >
+              {uploadingPayment ? (
+                <View className="flex-row items-center">
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text className="text-white text-base font-semibold ml-2">
+                    Submitting...
+                  </Text>
+                </View>
+              ) : (
+                <Text className="text-white text-base font-semibold">
+                  Submit Payment
+                </Text>
+              )}
+            </TouchableOpacity>
           </View>
         )}
 

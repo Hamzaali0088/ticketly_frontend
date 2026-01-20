@@ -13,12 +13,21 @@ export interface Ticket {
     location: string;
     image?: string;
     ticketPrice: number;
+    phone?: string;
+    createdBy?: {
+      _id: string;
+      fullName: string;
+      username?: string;
+      email: string;
+      phone?: string;
+    };
   };
   organizer?: {
     _id: string;
     fullName: string;
     username?: string;
     email: string;
+    phone?: string;
   };
   user?: {
     _id: string;
@@ -29,7 +38,7 @@ export interface Ticket {
   username: string;
   email: string;
   phone: string;
-  status: 'pending_payment' | 'confirmed' | 'used' | 'cancelled';
+  status: 'pending_payment' | 'payment_submitted' | 'confirmed' | 'used' | 'cancelled';
   accessKey?: string;
   qrCodeUrl?: string;
   createdAt: string;
