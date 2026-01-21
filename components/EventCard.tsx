@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Event } from '@/data/mockData';
 import { useRouter } from 'expo-router';
+import { getEventImageUrl } from '@/lib/utils/imageUtils';
 
 interface EventCardProps {
   event: Event;
@@ -36,7 +37,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
     >
       <View className="w-full h-[180px] relative">
         <Image
-          source={{ uri: event.image }}
+          source={{ uri: getEventImageUrl(event) || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800' }}
           className="w-full h-full"
           resizeMode="cover"
         />

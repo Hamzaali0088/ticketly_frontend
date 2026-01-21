@@ -12,6 +12,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
 import { eventsAPI, type Event } from '@/lib/api/events';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { getEventImageUrl } from '@/lib/utils/imageUtils';
 
 type TicketStatus = 'all' | 'pending_payment' | 'payment_in_review' | 'confirmed' | 'used' | 'cancelled';
 
@@ -279,7 +280,7 @@ export default function CreatedEventDetailsScreen() {
         {/* Header Image */}
         <View className="w-full h-[300px] relative">
           <Image
-            source={{ uri: event.image || 'https://via.placeholder.com/400' }}
+            source={{ uri: getEventImageUrl(event) || 'https://via.placeholder.com/400' }}
             className="w-full h-full"
             resizeMode="cover"
           />

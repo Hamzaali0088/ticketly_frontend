@@ -3,6 +3,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { eventsAPI } from '@/lib/api/events';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState, useRef } from 'react';
+import { getEventImageUrl } from '@/lib/utils/imageUtils';
 import {
   Dimensions,
   Image,
@@ -37,7 +38,7 @@ const convertEvent = (apiEvent: Event) => ({
   venue: apiEvent.location,
   city: apiEvent.location.split(',')[0] || apiEvent.location,
   category: 'Event',
-  image: apiEvent.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
+  image: getEventImageUrl(apiEvent) || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
   organizerId: apiEvent.createdBy?._id || '',
   organizerName: apiEvent.createdBy?.fullName || 'Organizer',
   price: apiEvent.ticketPrice,
@@ -239,7 +240,7 @@ export default function HomeScreen() {
                       style={{ width: '100%', height: '100%' }}
             >
               <Image
-                      source={{ uri: event.image }}
+                      source={{ uri: getEventImageUrl(event) || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800' }}
                       style={{
                         width: '100%',
                         height: '100%',

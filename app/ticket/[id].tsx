@@ -16,6 +16,7 @@ import { paymentsAPI } from '@/lib/api/payments';
 import * as ImagePicker from 'expo-image-picker';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { API_BASE_URL } from '@/lib/config';
+import { getEventImageUrl } from '@/lib/utils/imageUtils';
 
 export default function TicketScreen() {
   const router = useRouter();
@@ -358,7 +359,7 @@ export default function TicketScreen() {
         {/* Event Image */}
         {ticket.event?.image && (
           <Image
-            source={{ uri: ticket.event.image }}
+            source={{ uri: getEventImageUrl(ticket.event) || 'https://via.placeholder.com/400' }}
             className="w-full h-[200px] mt-3"
             resizeMode="cover"
           />

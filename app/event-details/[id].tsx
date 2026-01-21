@@ -17,6 +17,7 @@ import { ticketsAPI } from '@/lib/api/tickets';
 import { authAPI } from '@/lib/api/auth';
 import { Modal } from '@/components/Modal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { getEventImageUrl } from '@/lib/utils/imageUtils';
 
 export default function EventDetailsScreen() {
   const router = useRouter();
@@ -307,7 +308,7 @@ export default function EventDetailsScreen() {
         {/* Header Image */}
         <View className="w-full h-[300px] relative">
           <Image
-            source={{ uri: event.image || 'https://via.placeholder.com/400' }}
+            source={{ uri: getEventImageUrl(event) || 'https://via.placeholder.com/400' }}
             className="w-full h-full"
             resizeMode="cover"
           />

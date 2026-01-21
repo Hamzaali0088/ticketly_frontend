@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { getEventImageUrl } from '@/lib/utils/imageUtils';
 import {
   ActivityIndicator,
   Alert,
@@ -43,7 +44,7 @@ const convertEvent = (apiEvent: any) => {
     venue: apiEvent.location || '',
     city: (apiEvent.location || '').split(',')[0] || apiEvent.location || '',
     category: 'Event',
-    image: apiEvent.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
+    image: getEventImageUrl(apiEvent) || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
     organizerId: apiEvent.createdBy?._id || apiEvent.createdBy?.id || '',
     organizerName: apiEvent.createdBy?.fullName || 'Organizer',
     price: apiEvent.ticketPrice || 0,
@@ -79,7 +80,7 @@ export default function ProfileScreen() {
   const bottomPadding = tabBarTotalHeight + 20; // Extra 20px for comfortable spacing
 
   // Helper function to get full profile image URL
-  const getProfileImageUrl = () => {
+  const getProfileImageUrl = (): string | null => {
     if (!user?.profileImage) return null;
 
     // If profileImageUrl is provided, prefer it
@@ -540,7 +541,7 @@ export default function ProfileScreen() {
       >
         <View className="w-full h-[180px] relative">
           <Image
-            source={{ uri: event.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800' }}
+            source={{ uri: getEventImageUrl(event) || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800' }}
             className="w-full h-full"
             resizeMode="cover"
           />
