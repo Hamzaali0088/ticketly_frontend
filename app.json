@@ -18,14 +18,16 @@
       "usesCleartextTraffic": true,
       "permissions": [
         "READ_EXTERNAL_STORAGE",
-        "READ_MEDIA_IMAGES"
+        "READ_MEDIA_IMAGES",
+        "CAMERA"
       ]
     },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "We need access to your photos to upload profile and event images.",
-        "NSPhotoLibraryAddUsageDescription": "We need access to save images to your photo library."
+        "NSPhotoLibraryAddUsageDescription": "We need access to save images to your photo library.",
+        "NSCameraUsageDescription": "We need access to your camera to scan QR codes for ticket validation."
       }
     },
     "web": {
@@ -49,6 +51,12 @@
         {
           "photosPermission": "The app accesses your photos to upload profile and event images.",
           "cameraPermission": "The app accesses your camera to take photos for events."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Ticketly to access your camera to scan QR codes for ticket validation."
         }
       ]
     ],

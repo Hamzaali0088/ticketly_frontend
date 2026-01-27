@@ -18,6 +18,7 @@ import { eventsAPI, type Event } from '@/lib/api/events';
 import { ticketsAPI } from '@/lib/api/tickets';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { getEventImageUrl } from '@/lib/utils/imageUtils';
+import { QRScanner } from '@/components/QRScanner';
 
 type TicketStatus = 'all' | 'pending_payment' | 'payment_in_review' | 'confirmed' | 'used' | 'cancelled';
 
@@ -33,6 +34,7 @@ interface Ticket {
   email: string;
   phone: string;
   status: string;
+  accessKey?: string;
   qrCodeUrl?: string;
   createdAt: string;
   updatedAt: string;
@@ -55,6 +57,7 @@ export default function CreatedEventDetailsScreen() {
   const [selectedStatus, setSelectedStatus] = useState<'used' | 'cancelled' | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [qrScannerOpen, setQrScannerOpen] = useState(false);
 
   // Get event ID helper
   const getEventId = () => {
@@ -514,6 +517,14 @@ export default function CreatedEventDetailsScreen() {
 
                     {/* Ticket Details */}
                     <View>
+                      {ticket.accessKey && (
+                        <View className="flex-row items-center mb-2">
+                          <MaterialIcons name="confirmation-number" size={14} color="#9CA3AF" style={{ marginRight: 8 }} />
+                          <Text className="text-[#D1D5DB] text-[10px] font-mono flex-1" numberOfLines={1}>
+                            {ticket.accessKey}
+                          </Text>
+                        </View>
+                      )}
                       <View className="flex-row items-center mb-2">
                         <MaterialIcons name="email" size={14} color="#9CA3AF" style={{ marginRight: 8 }} />
                         <Text className="text-[#D1D5DB] text-xs flex-1" numberOfLines={1}>
@@ -599,7 +610,18 @@ export default function CreatedEventDetailsScreen() {
 
             {/* Ticket Number Input */}
             <View className="mb-4">
-              <Text className="text-white text-sm font-semibold mb-2">Ticket Number</Text>
+              <View className="flex-row items-center justify-between mb-2">
+                <Text className="text-white text-sm font-semibold">Ticket Number</Text>
+                <TouchableOpacity
+                  className="bg-[#9333EA] py-1.5 px-3 rounded-lg flex-row items-center"
+                  onPress={() => {
+                    setQrScannerOpen(true);
+                  }}
+                >
+                  <MaterialIcons name="qr-code-scanner" size={16} color="#FFFFFF" style={{ marginRight: 4 }} />
+                  <Text className="text-white text-xs font-semibold">Scan QR</Text>
+                </TouchableOpacity>
+              </View>
               <TextInput
                 className="bg-[#0F0F0F] border border-[#374151] rounded-xl px-4 py-3 text-white"
                 placeholder="Enter ticket # (e.g., TK-1234567890-ABC123-4567)"
@@ -706,6 +728,21 @@ export default function CreatedEventDetailsScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* QR Scanner Modal */}
+      <QRScanner
+        visible={qrScannerOpen}
+        onClose={() => setQrScannerOpen(false)}
+        onScan={(data) => {
+          console.log('QR Code scanned:', data);
+          setTicketNumber(data);
+          setQrScannerOpen(false);
+          // Clear error when QR is scanned
+          if (updateError) {
+            setUpdateError(null);
+          }
+        }}
+      />
     </View>
   );
 }

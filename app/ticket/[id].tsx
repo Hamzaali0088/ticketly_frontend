@@ -17,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { API_BASE_URL } from '@/lib/config';
 import { getEventImageUrl } from '@/lib/utils/imageUtils';
+import QRCode from 'react-native-qrcode-svg';
 
 export default function TicketScreen() {
   const router = useRouter();
@@ -31,6 +32,10 @@ export default function TicketScreen() {
   const [screenshotUri, setScreenshotUri] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string>('bank_transfer');
   const [uploadingPayment, setUploadingPayment] = useState(false);
+
+  // QR code loading states
+  const [qrImageLoaded, setQrImageLoaded] = useState(false);
+  const [qrImageError, setQrImageError] = useState(false);
 
   // Helper function to get full payment screenshot URL (same logic as profile image)
   const getPaymentScreenshotUrl = () => {
@@ -421,31 +426,59 @@ export default function TicketScreen() {
           </View>
         </View>
 
-        {/* QR Code Section */}
-        {ticket.status === 'confirmed' && (
+        {/* QR Code Section - Show for confirmed tickets */}
+        {ticket.status === 'confirmed' && ticket.accessKey && (
           <View className="p-5 border-t border-[#374151] items-center">
             <Text className="text-white text-base font-semibold mb-4">Scan QR Code at Entry</Text>
-            {ticket.qrCodeUrl ? (
-              <View className="bg-white p-5 rounded-xl mb-3">
-                <Image
-                  source={{ uri: ticket.qrCodeUrl }}
-                  className="w-[200px] h-[200px]"
-                  resizeMode="contain"
-                />
-              </View>
-            ) : ticket.accessKey ? (
-              <View className="bg-white p-5 rounded-xl mb-3">
-                <View className="w-[200px] h-[200px] bg-[#F3F4F6] items-center justify-center rounded-lg">
-                  <Text className="text-[#6B7280] text-base font-bold mb-2">Access Key</Text>
-                  <Text className="text-[#9CA3AF] text-[10px] text-center px-2.5 font-mono">
-                    {ticket.accessKey}
-                  </Text>
-                </View>
-              </View>
-            ) : null}
+            <View className="bg-white p-5 rounded-xl mb-3 items-center justify-center">
+              {/* Always use SVG QR code for reliability */}
+              <QRCode
+                value={ticket.accessKey}
+                size={200}
+                color="#000000"
+                backgroundColor="#FFFFFF"
+              />
+            </View>
             <Text className="text-[#9CA3AF] text-xs text-center">
               Please arrive 15 minutes before the event starts
             </Text>
+          </View>
+        )}
+
+        {/* Access Key & QR Code Section - Show for non-confirmed tickets */}
+        {ticket.status !== 'confirmed' && ticket.accessKey && (
+          <View className="p-5 border-t border-[#374151]">
+            {/* QR Code - Show prominently at the top */}
+            {ticket.accessKey && (
+              <View className="items-center mb-4">
+                <Text className="text-white text-base font-semibold mb-3">Your Ticket QR Code</Text>
+                <View className="bg-white p-4 rounded-xl items-center justify-center">
+                  {/* Always use SVG QR code for reliability */}
+                  <QRCode
+                    value={ticket.accessKey}
+                    size={200}
+                    color="#000000"
+                    backgroundColor="#FFFFFF"
+                  />
+                </View>
+                <View className="bg-[#F59E0B]/20 rounded-lg px-4 py-2 mt-3">
+                  <Text className="text-[#F59E0B] text-xs text-center font-semibold">
+                    Complete payment to activate this ticket
+                  </Text>
+                </View>
+              </View>
+            )}
+            
+            {/* Ticket Number */}
+            <View className="flex-row items-center mb-3">
+              <MaterialIcons name="confirmation-number" size={20} color="#9CA3AF" style={{ marginRight: 8 }} />
+              <Text className="text-white text-sm font-semibold">Ticket Number</Text>
+            </View>
+            <View className="bg-[#0F0F0F] rounded-xl p-4 border border-[#374151]">
+              <Text className="text-[#D1D5DB] text-xs font-mono text-center" selectable>
+                {ticket.accessKey}
+              </Text>
+            </View>
           </View>
         )}
 
