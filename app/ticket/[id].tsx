@@ -343,7 +343,7 @@ export default function TicketScreen() {
           </View>
           <View className="items-end">
             <Text className="text-[#9CA3AF] text-xs mb-1">Ticket #</Text>
-            <Text className="text-white text-sm font-bold">{ticket.id.slice(-8).toUpperCase()}</Text>
+            <Text className="text-white text-sm font-bold">{ticket.accessKey || ticket.id.slice(-8).toUpperCase()}</Text>
           </View>
         </View>
 

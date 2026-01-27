@@ -134,8 +134,26 @@ export const authAPI = {
 
   // Login (Step 1 - Send OTP)
   login: async (data: LoginRequest): Promise<LoginResponse> => {
-    const response = await apiClient.post('/auth/login', data);
-    return response.data;
+    try {
+      const response = await apiClient.post('/auth/login', data);
+      return response.data;
+    } catch (error: any) {
+      // Handle network errors with helpful messages
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error' || error.message?.includes('Network')) {
+        console.error('❌ Network Error Details:', {
+          code: error.code,
+          message: error.message,
+          apiBaseUrl: API_BASE_URL,
+          config: error.config?.url,
+        });
+        throw new Error(
+          `Cannot connect to backend server at ${API_BASE_URL}. ` +
+          `Please make sure the backend server is running on port 5001. ` +
+          `If you're using a physical device, set EXPO_PUBLIC_LOCAL_IP in your .env file.`
+        );
+      }
+      throw error;
+    }
   },
 
   // Verify OTP (Step 2 - Complete Login)

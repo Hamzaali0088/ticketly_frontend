@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
 import { authAPI } from '@/lib/api/auth';
 import { getAccessToken, getRefreshToken, setTokens } from '@/lib/api/client';
+import { API_BASE_URL } from '@/lib/config';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function LoginScreen() {
@@ -77,10 +78,65 @@ export default function LoginScreen() {
     checkAuth();
   }, [login, router]);
 
+  // Check for OAuth errors in URL params
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location?.search || '');
+      const error = params.get('error');
+      
+      if (error) {
+        let errorMessage = 'Authentication failed';
+        switch (error) {
+          case 'authentication_failed':
+            errorMessage = 'Google authentication failed. Please try again.';
+            break;
+          case 'profile_fetch_failed':
+            errorMessage = 'Failed to fetch user profile. Please try again.';
+            break;
+          case 'auth_failed':
+            errorMessage = 'Authentication error. Please try again.';
+            break;
+          case 'invalid_response':
+            errorMessage = 'Invalid authentication response. Please try again.';
+            break;
+          case 'server_error':
+            errorMessage = 'Server error. Please try again later.';
+            break;
+        }
+        
+        Alert.alert('Login Error', errorMessage);
+        
+        // Clear the error from URL
+        if (window.history) {
+          window.history.replaceState({}, document.title, '/login');
+        }
+      }
+    }
+  }, []);
+
   const handleGoogleLogin = () => {
-    // Google OAuth - redirect to backend
-    Alert.alert('Info', 'Google login will be implemented with OAuth flow');
-    // TODO: Implement Google OAuth flow
+    // Get the backend URL (remove /api suffix for the auth route)
+    const backendUrl = API_BASE_URL.replace('/api', '');
+    const googleAuthUrl = `${backendUrl}/api/auth/google`;
+    
+    console.log('🔐 Initiating Google OAuth:', googleAuthUrl);
+    
+    // For web, redirect directly
+    if (Platform.OS === 'web') {
+      window.location.href = googleAuthUrl;
+    } else {
+      // For mobile, show info that it's web-only for now
+      Alert.alert(
+        'Google Login',
+        'Google OAuth is currently supported on web. Please use the web version or login with email/password.',
+        [{ text: 'OK' }]
+      );
+      
+      // TODO: For mobile OAuth, you would need to implement expo-auth-session
+      // Example:
+      // import * as WebBrowser from 'expo-web-browser';
+      // WebBrowser.openAuthSessionAsync(googleAuthUrl, 'your-app://auth/callback');
+    }
   };
 
   const handleSignup = async () => {
@@ -173,9 +229,20 @@ export default function LoginScreen() {
         setLoading(false);
       }
     } catch (error: any) {
-      // Extract error message from response
-      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Login failed. Please try again.';
-      setLoginError(errorMsg);
+      // Handle network errors with helpful messages
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error' || error.message?.includes('Network')) {
+        setLoginError('Cannot connect to backend server. Please make sure the backend is running on port 5001.');
+        console.error('Network Error Details:', {
+          code: error.code,
+          message: error.message,
+          apiBaseUrl: API_BASE_URL,
+          config: error.config?.url,
+        });
+      } else {
+        // Extract error message from response
+        const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Login failed. Please try again.';
+        setLoginError(errorMsg);
+      }
       setLoading(false);
     }
   };

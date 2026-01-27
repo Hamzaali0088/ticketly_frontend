@@ -107,6 +107,33 @@ export interface ScanTicketResponse {
   };
 }
 
+export interface UpdateTicketStatusByKeyRequest {
+  accessKey: string;
+  status: 'used' | 'cancelled';
+}
+
+export interface UpdateTicketStatusByKeyResponse {
+  success: boolean;
+  message: string;
+  ticket: {
+    id: string;
+    accessKey: string;
+    status: string;
+    user: {
+      _id: string;
+      fullName: string;
+      email: string;
+      username?: string;
+    };
+    event: {
+      _id: string;
+      title: string;
+      date: string;
+    };
+    updatedAt: string;
+  };
+}
+
 // ==================== TICKET API FUNCTIONS ====================
 
 export const ticketsAPI = {
@@ -151,6 +178,19 @@ export const ticketsAPI = {
    */
   scanTicket: async (data: ScanTicketRequest): Promise<ScanTicketResponse> => {
     const response = await apiClient.post('/tickets/scan', data);
+    return response.data;
+  },
+
+  /**
+   * Update ticket status by accessKey (ticket #)
+   * Requires organizer authentication
+   * Only works if ticket status is "confirmed"
+   * Can only update to "used" or "cancelled"
+   * @param data - Update ticket status data containing accessKey and status
+   * @returns Updated ticket information
+   */
+  updateTicketStatusByKey: async (data: UpdateTicketStatusByKeyRequest): Promise<UpdateTicketStatusByKeyResponse> => {
+    const response = await apiClient.put('/tickets/update-status-by-key', data);
     return response.data;
   },
 };

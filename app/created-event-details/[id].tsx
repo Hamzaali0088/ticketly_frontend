@@ -7,10 +7,15 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
+  Alert,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
 import { eventsAPI, type Event } from '@/lib/api/events';
+import { ticketsAPI } from '@/lib/api/tickets';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { getEventImageUrl } from '@/lib/utils/imageUtils';
 
@@ -45,6 +50,11 @@ export default function CreatedEventDetailsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TicketStatus>('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [ticketNumber, setTicketNumber] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<'used' | 'cancelled' | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
   // Get event ID helper
   const getEventId = () => {
@@ -141,6 +151,77 @@ export default function CreatedEventDetailsScreen() {
   // Refresh both event and tickets
   const onRefresh = async () => {
     await Promise.all([fetchEvent(true), fetchTickets(true)]);
+  };
+
+  // Handle ticket status update by ticket #
+  const handleUpdateTicketStatus = async () => {
+    if (!ticketNumber.trim()) {
+      setUpdateError('Please enter a ticket number');
+      return;
+    }
+
+    if (!selectedStatus) {
+      setUpdateError('Please select a status');
+      return;
+    }
+
+    try {
+      setUpdatingStatus(true);
+      setUpdateError(null); // Clear any previous errors
+      
+      const response = await ticketsAPI.updateTicketStatusByKey({
+        accessKey: ticketNumber.trim(),
+        status: selectedStatus,
+      });
+
+      if (response.success) {
+        // Close modal immediately
+        setUpdateModalOpen(false);
+        setTicketNumber('');
+        setSelectedStatus(null);
+        setUpdateError(null);
+        
+        // Refresh tickets to show updated status
+        fetchTickets();
+        
+        // Show success message after modal is closed
+        setTimeout(() => {
+          Alert.alert('Success', response.message || 'Ticket status updated successfully');
+        }, 300);
+      }
+    } catch (error: any) {
+      console.error('Error updating ticket status:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+      });
+      
+      // Extract error message from response
+      let errorMessage = 'Failed to update ticket status';
+      
+      if (error.response?.data) {
+        // Try different possible error message fields
+        errorMessage = 
+          error.response.data.message ||
+          error.response.data.error ||
+          (Array.isArray(error.response.data.errors) 
+            ? error.response.data.errors.join(', ') 
+            : error.response.data.errors) ||
+          errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Set error state to display in modal
+      setUpdateError(errorMessage);
+      
+      // Also show alert as fallback
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
 
   // Filter tickets by status
@@ -373,6 +454,17 @@ export default function CreatedEventDetailsScreen() {
           </View>
         </View>
 
+        {/* Update Ticket Status Section */}
+        <View className="px-5 mt-4 mb-2">
+          <TouchableOpacity
+            className="bg-[#9333EA] py-4 px-5 rounded-xl flex-row items-center justify-center"
+            onPress={() => setUpdateModalOpen(true)}
+          >
+            <MaterialIcons name="edit" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text className="text-white text-base font-semibold">Update Ticket Status by Ticket #</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Tickets List */}
         <View className="px-5 mt-2">
           {loadingTickets ? (
@@ -464,6 +556,156 @@ export default function CreatedEventDetailsScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Update Ticket Status Modal */}
+      <Modal
+        visible={updateModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setUpdateModalOpen(false);
+          setTicketNumber('');
+          setSelectedStatus(null);
+          setUpdateError(null);
+        }}
+      >
+        <Pressable
+          className="flex-1 bg-black/70 justify-center items-center p-5"
+          onPress={() => {
+            setUpdateModalOpen(false);
+            setTicketNumber('');
+            setSelectedStatus(null);
+            setUpdateError(null);
+          }}
+        >
+          <Pressable
+            className="bg-[#1F1F1F] rounded-2xl p-6 w-full max-w-[400px]"
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text className="text-white text-xl font-bold mb-3 text-center">Update Ticket Status</Text>
+            <Text className="text-[#D1D5DB] text-sm mb-4">
+              Enter the ticket number (Ticket #) to update its status. Only tickets with "Submitted" status can be updated.
+            </Text>
+
+            {/* Error Message */}
+            {updateError && (
+              <View className="bg-[#EF4444]/20 border border-[#EF4444]/50 rounded-xl p-3 mb-4">
+                <View className="flex-row items-center">
+                  <MaterialIcons name="error-outline" size={20} color="#EF4444" style={{ marginRight: 8 }} />
+                  <Text className="text-[#EF4444] text-sm flex-1">{updateError}</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Ticket Number Input */}
+            <View className="mb-4">
+              <Text className="text-white text-sm font-semibold mb-2">Ticket Number</Text>
+              <TextInput
+                className="bg-[#0F0F0F] border border-[#374151] rounded-xl px-4 py-3 text-white"
+                placeholder="Enter ticket # (e.g., TK-1234567890-ABC123-4567)"
+                placeholderTextColor="#6B7280"
+                value={ticketNumber}
+                onChangeText={(text) => {
+                  setTicketNumber(text);
+                  // Clear error when user starts typing
+                  if (updateError) {
+                    setUpdateError(null);
+                  }
+                }}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            {/* Status Selection */}
+            <View className="mb-6">
+              <Text className="text-white text-sm font-semibold mb-2">New Status</Text>
+              <View className="flex-row gap-3">
+                <TouchableOpacity
+                  className={`flex-1 py-3 px-4 rounded-xl border-2 ${
+                    selectedStatus === 'used'
+                      ? 'bg-[#10B981]/20 border-[#10B981]'
+                      : 'bg-[#0F0F0F] border-[#374151]'
+                  }`}
+                  onPress={() => setSelectedStatus('used')}
+                >
+                  <View className="flex-row items-center justify-center">
+                    <MaterialIcons
+                      name="check-circle"
+                      size={20}
+                      color={selectedStatus === 'used' ? '#10B981' : '#9CA3AF'}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text
+                      className={`text-sm font-semibold ${
+                        selectedStatus === 'used' ? 'text-[#10B981]' : 'text-[#9CA3AF]'
+                      }`}
+                    >
+                      Used
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  className={`flex-1 py-3 px-4 rounded-xl border-2 ${
+                    selectedStatus === 'cancelled'
+                      ? 'bg-[#EF4444]/20 border-[#EF4444]'
+                      : 'bg-[#0F0F0F] border-[#374151]'
+                  }`}
+                  onPress={() => setSelectedStatus('cancelled')}
+                >
+                  <View className="flex-row items-center justify-center">
+                    <MaterialIcons
+                      name="cancel"
+                      size={20}
+                      color={selectedStatus === 'cancelled' ? '#EF4444' : '#9CA3AF'}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text
+                      className={`text-sm font-semibold ${
+                        selectedStatus === 'cancelled' ? 'text-[#EF4444]' : 'text-[#9CA3AF]'
+                      }`}
+                    >
+                      Cancelled
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Action Buttons */}
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                className="flex-1 bg-[#374151] py-3 px-4 rounded-xl"
+                onPress={() => {
+                  setUpdateModalOpen(false);
+                  setTicketNumber('');
+                  setSelectedStatus(null);
+                  setUpdateError(null);
+                }}
+                disabled={updatingStatus}
+              >
+                <Text className="text-white text-center font-semibold">Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-1 bg-[#9333EA] py-3 px-4 rounded-xl flex-row items-center justify-center"
+                onPress={handleUpdateTicketStatus}
+                disabled={updatingStatus || !ticketNumber.trim() || !selectedStatus}
+              >
+                {updatingStatus ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <MaterialIcons name="save" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
+                    <Text className="text-white text-center font-semibold">Update</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

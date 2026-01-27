@@ -11,6 +11,7 @@ const apiClient: AxiosInstance = axios.create({
   // Don't set default Content-Type here - let the interceptor handle it
   // This prevents issues with FormData uploads
   timeout: 60000, // 60 seconds timeout (file uploads need more time)
+  withCredentials: false, // Set to false for CORS (credentials handled via Authorization header)
   // IMPORTANT:
   // Do NOT override validateStatus here. We want 401 responses to be treated
   // as errors so the response interceptor can trigger the refresh-token flow.
@@ -19,6 +20,16 @@ const apiClient: AxiosInstance = axios.create({
 // Request interceptor to add access token
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    // Log request for debugging
+    if (__DEV__) {
+      console.log('📤 Making request:', {
+        method: config.method?.toUpperCase(),
+        url: config.url,
+        baseURL: config.baseURL,
+        fullURL: `${config.baseURL}${config.url}`,
+      });
+    }
+
     const accessToken = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
     if (accessToken && config.headers) {
       config.headers.Authorization = `Bearer ${accessToken}`;
@@ -42,6 +53,7 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error: AxiosError) => {
+    console.error('❌ Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -66,8 +78,28 @@ const processQueue = (error: AxiosError | null, token: string | null = null) => 
 };
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (__DEV__) {
+      console.log('✅ Response received:', {
+        status: response.status,
+        url: response.config.url,
+      });
+    }
+    return response;
+  },
   async (error: AxiosError) => {
+    // Log error details for debugging
+    if (__DEV__) {
+      console.error('❌ Response error:', {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+        fullURL: error.config ? `${error.config.baseURL}${error.config.url}` : 'unknown',
+      });
+    }
+
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     // If error is 401 and we haven't retried yet
