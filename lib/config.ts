@@ -74,8 +74,8 @@ const getApiBaseUrl = (): string => {
 };
 
 // export const API_BASE_URL = getApiBaseUrl();
-export const API_BASE_URL = "https://ticketlybackend-production.up.railway.app/api";
-// export const API_BASE_URL = "http://localhost:5001/api";
+// export const API_BASE_URL = "https://ticketlybackend-production.up.railway.app/api";
+export const API_BASE_URL = "http://localhost:5001/api";
 
 // Log the API URL being used (for debugging)
 if (__DEV__) {

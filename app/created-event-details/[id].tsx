@@ -374,6 +374,17 @@ export default function CreatedEventDetailsScreen() {
           >
             <MaterialIcons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
+          <TouchableOpacity
+            className="absolute top-[50px] right-5 bg-[#9333EA] w-10 h-10 rounded-full items-center justify-center"
+            onPress={() => {
+              const eventId = getEventId();
+              if (eventId) {
+                router.push(`/edit-event/${eventId}`);
+              }
+            }}
+          >
+            <MaterialIcons name="edit" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
 
         {/* Sticky Container: Event Info Card + Tabs */}
@@ -382,10 +393,24 @@ export default function CreatedEventDetailsScreen() {
           <View className="bg-[#1F1F1F] rounded-t-3xl p-5 -mt-5">
             <View className="flex-row justify-between items-start mb-6">
               <Text className="text-white text-2xl font-bold flex-1 mr-3">{event.title}</Text>
-              <View className="bg-[#374151] py-1.5 px-3 rounded-xl">
-                <Text className="text-[#D1D5DB] text-xs font-semibold">
-                  {event.status === 'approved' ? 'Approved' : event.status === 'pending' ? 'Pending' : 'Draft'}
-                </Text>
+              <View className="flex-row items-center gap-2">
+                <View className="bg-[#374151] py-1.5 px-3 rounded-xl">
+                  <Text className="text-[#D1D5DB] text-xs font-semibold">
+                    {event.status === 'approved' ? 'Approved' : event.status === 'pending' ? 'Pending' : 'Draft'}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  className="bg-[#9333EA] py-2 px-3 rounded-xl flex-row items-center"
+                  onPress={() => {
+                    const eventId = getEventId();
+                    if (eventId) {
+                      router.push(`/edit-event/${eventId}`);
+                    }
+                  }}
+                >
+                  <MaterialIcons name="edit" size={16} color="#FFFFFF" style={{ marginRight: 4 }} />
+                  <Text className="text-white text-xs font-semibold">Edit</Text>
+                </TouchableOpacity>
               </View>
             </View>
 
