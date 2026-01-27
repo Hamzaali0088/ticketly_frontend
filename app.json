@@ -16,6 +16,8 @@
       "edgeToEdgeEnabled": true,
       "package": "com.hamza0088.bookingapp",
       "usesCleartextTraffic": true,
+      "compileSdkVersion": 34,
+      "targetSdkVersion": 34,
       "permissions": [
         "READ_EXTERNAL_STORAGE",
         "READ_MEDIA_IMAGES",
