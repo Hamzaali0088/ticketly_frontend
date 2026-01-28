@@ -31,6 +31,14 @@ export interface Event {
   registeredUsers: string[];
   likedUsers: string[];
   entryPolicy?: string;
+  // Optional host & attendees metadata when using real API data
+  hostAvatarUrl?: string | null;
+  joinedUsers?: {
+    id: string;
+    name: string;
+    avatarUrl?: string | null;
+  }[];
+  joinedCount?: number;
 }
 
 export interface Ticket {

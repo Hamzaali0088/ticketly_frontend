@@ -22,7 +22,15 @@ export interface Event {
     username?: string;
     email: string;
     phone?: string;
+    profileImage?: string | null;
+    profileImageUrl?: string | null;
   };
+  joinedUsers?: {
+    _id: string;
+    name: string;
+    profileImageUrl?: string | null;
+  }[];
+  joinedCount?: number;
   createdAt?: string;
   updatedAt?: string;
 }

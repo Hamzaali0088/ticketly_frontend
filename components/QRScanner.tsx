@@ -200,3 +200,6 @@ export const QRScanner: React.FC<QRScannerProps> = ({ visible, onClose, onScan }
 };
 
 
+
+
+

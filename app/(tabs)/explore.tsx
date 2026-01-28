@@ -3,7 +3,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { eventsAPI } from '@/lib/api/events';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState, useEffect } from 'react';
-import { getEventImageUrl } from '@/lib/utils/imageUtils';
+import { getEventImageUrl, getProfileImageUrl } from '@/lib/utils/imageUtils';
 import {
   FlatList,
   Text,
@@ -34,6 +34,13 @@ const convertEvent = (apiEvent: Event) => ({
   accessType: apiEvent.ticketPrice > 0 ? 'paid' as const : 'open' as const,
   registeredUsers: [],
   likedUsers: [],
+  hostAvatarUrl: apiEvent.createdBy ? getProfileImageUrl(apiEvent.createdBy as any) : null,
+  joinedUsers: (apiEvent.joinedUsers || []).map((user) => ({
+    id: user._id,
+    name: user.name,
+    avatarUrl: user.profileImageUrl || undefined,
+  })),
+  joinedCount: apiEvent.joinedCount ?? (apiEvent.joinedUsers?.length ?? 0),
 });
 
 export default function ExploreScreen() {

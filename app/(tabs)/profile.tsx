@@ -528,7 +528,7 @@ export default function ProfileScreen() {
 
     return (
       <TouchableOpacity
-        className="bg-[#1F1F1F] rounded-xl overflow-hidden mb-4 w-full"
+        className="bg-[#1F1F1F] rounded-xl overflow-hidden mb-4 w-full "
         onPress={() => {
           if (eventId) {
             console.log('📍 Navigating to joined event details with ID:', eventId);
@@ -539,6 +539,10 @@ export default function ProfileScreen() {
         }}
         activeOpacity={0.8}
       >
+
+        <View className="flex-row items-center justify-between">
+          
+        </View>
         <View className="w-full h-[180px] relative">
           <Image
             source={{ uri: getEventImageUrl(event) || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800' }}

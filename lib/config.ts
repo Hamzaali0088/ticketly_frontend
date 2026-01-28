@@ -20,9 +20,9 @@ import { Platform } from 'react-native';
 // Environment types
 type Environment = 'local' | 'staging' | 'production';
 
-// Get environment from env variable or default to 'local'
+// Get environment from env variable or default to 'production' for builds
 const getEnvironment = (): Environment => {
-  const env = process.env.EXPO_PUBLIC_ENV || 'local';
+  const env = process.env.EXPO_PUBLIC_ENV || (__DEV__ ? 'local' : 'production');
   return env as Environment;
 };
 
@@ -73,9 +73,12 @@ const getApiBaseUrl = (): string => {
   return 'http://localhost:5001/api';
 };
 
+// Use the environment-aware function for automatic URL detection
 // export const API_BASE_URL = getApiBaseUrl();
+// Or hardcode production URL for all devices:
 // export const API_BASE_URL = "https://ticketlybackend-production.up.railway.app/api";
 export const API_BASE_URL = "http://localhost:5001/api";
+
 
 // Log the API URL being used (for debugging)
 if (__DEV__) {

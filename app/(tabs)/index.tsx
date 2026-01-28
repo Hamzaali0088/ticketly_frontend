@@ -3,7 +3,8 @@ import { useAppStore } from '@/store/useAppStore';
 import { eventsAPI } from '@/lib/api/events';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState, useRef } from 'react';
-import { getEventImageUrl } from '@/lib/utils/imageUtils';
+import { getEventImageUrl, getProfileImageUrl } from '@/lib/utils/imageUtils';
+import { API_BASE_URL } from '@/lib/config';
 import {
   Dimensions,
   Image,
@@ -28,6 +29,29 @@ const CARD_WIDTH = width * 0.82; // 82% of screen width for better peek effect
 const CARD_SPACING = 16; // Space between cards
 const HORIZONTAL_PADDING = (width - CARD_WIDTH) / 2; // Center padding to center the cards
 
+// Normalize profile URLs coming from backend (especially localhost URLs)
+const normalizeProfileUrl = (url?: string | null): string | undefined => {
+  if (!url) return undefined;
+
+  // If backend returned a localhost URL (old data), rewrite it to use the current API base URL
+  if (url.includes('localhost') || url.includes('127.0.0.1')) {
+    const baseUrl = API_BASE_URL.replace('/api', '');
+    try {
+      const parsed = new URL(url);
+      const path = parsed.pathname || '';
+      return `${baseUrl}${path}`;
+    } catch {
+      const uploadsIndex = url.indexOf('/uploads');
+      if (uploadsIndex !== -1) {
+        const path = url.substring(uploadsIndex);
+        return `${baseUrl}${path}`;
+      }
+    }
+  }
+
+  return url;
+};
+
 // Helper function to convert API event to app event format
 const convertEvent = (apiEvent: Event) => ({
   id: apiEvent._id,
@@ -45,6 +69,13 @@ const convertEvent = (apiEvent: Event) => ({
   accessType: apiEvent.ticketPrice > 0 ? 'paid' as const : 'open' as const,
   registeredUsers: [],
   likedUsers: [],
+  hostAvatarUrl: apiEvent.createdBy ? getProfileImageUrl(apiEvent.createdBy as any) : null,
+  joinedUsers: (apiEvent.joinedUsers || []).map((user) => ({
+    id: user._id,
+    name: user.name,
+    avatarUrl: normalizeProfileUrl(user.profileImageUrl || undefined),
+  })),
+  joinedCount: apiEvent.joinedCount ?? (apiEvent.joinedUsers?.length ?? 0),
 });
 
 export default function HomeScreen() {
@@ -65,7 +96,7 @@ export default function HomeScreen() {
   // Calculate bottom padding: tab bar height + safe area bottom + extra padding
   // Tab bar layout: iOS height=90 (includes paddingBottom=30), Android height=75 + paddingBottom + marginBottom=10
   // Total space from bottom: iOS = 90 + insets.bottom, Android = 75 + max(insets.bottom, 50) + 10 + insets.bottom
-  const tabBarTotalHeight = Platform.OS === 'ios' 
+  const tabBarTotalHeight = Platform.OS === 'ios'
     ? 90 + insets.bottom // iOS: height includes padding, add safe area
     : 75 + Math.max(insets.bottom, 50) + 10 + insets.bottom; // Android: height + paddingBottom + marginBottom + safe area
   const bottomPadding = tabBarTotalHeight + 20; // Extra 20px for comfortable spacing
@@ -92,7 +123,7 @@ export default function HomeScreen() {
           const featured = convertedEvents.slice(0, Math.min(5, convertedEvents.length));
           setFeaturedEvents(featured);
           // Initialize animated scales for each card
-          animatedScales.current = featured.map((_, index) => 
+          animatedScales.current = featured.map((_, index) =>
             new Animated.Value(index === 0 ? 1 : 0.92)
           );
         }
@@ -210,7 +241,7 @@ export default function HomeScreen() {
                   scrollPosition + (CARD_WIDTH + CARD_SPACING) * 0.5,
                   scrollPosition + (CARD_WIDTH + CARD_SPACING),
                 ];
-                
+
                 // Smooth opacity interpolation for real-time feedback
                 const opacity = scrollX.interpolate({
                   inputRange,
@@ -236,55 +267,55 @@ export default function HomeScreen() {
                   >
                     <TouchableOpacity
                       onPress={() => router.push(`/event-details/${event.id}`)}
-              activeOpacity={0.9}
+                      activeOpacity={0.9}
                       style={{ width: '100%', height: '100%' }}
-            >
-              <Image
-                      source={{ uri: getEventImageUrl(event) || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800' }}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                      }}
-                resizeMode="cover"
-              />
-                    <View
-                      style={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                        padding: 20,
-                        borderBottomLeftRadius: 20,
-                        borderBottomRightRadius: 20,
-                      }}
                     >
-                      <View style={{ gap: 8 }}>
-                        <Text
-                          className="text-white text-2xl font-bold"
-                          numberOfLines={2}
-                          style={{ textShadowColor: 'rgba(0, 0, 0, 0.75)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 }}
-                        >
-                          {event.title}
-                        </Text>
-                        <Text
-                          className="text-[#D1D5DB] text-sm"
-                          style={{ textShadowColor: 'rgba(0, 0, 0, 0.75)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}
-                        >
-                          {event.venue}
-                  </Text>
-                        <Text
-                          className="text-[#9333EA] text-sm font-semibold"
-                          style={{ textShadowColor: 'rgba(0, 0, 0, 0.75)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}
-                        >
-                          {new Date(event.date).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+                      <Image
+                        source={{ uri: getEventImageUrl(event) || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800' }}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                        }}
+                        resizeMode="cover"
+                      />
+                      <View
+                        style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          padding: 20,
+                          borderBottomLeftRadius: 20,
+                          borderBottomRightRadius: 20,
+                        }}
+                      >
+                        <View style={{ gap: 8 }}>
+                          <Text
+                            className="text-white text-2xl font-bold"
+                            numberOfLines={2}
+                            style={{ textShadowColor: 'rgba(0, 0, 0, 0.75)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 }}
+                          >
+                            {event.title}
+                          </Text>
+                          <Text
+                            className="text-[#D1D5DB] text-sm"
+                            style={{ textShadowColor: 'rgba(0, 0, 0, 0.75)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}
+                          >
+                            {event.venue}
+                          </Text>
+                          <Text
+                            className="text-[#9333EA] text-sm font-semibold"
+                            style={{ textShadowColor: 'rgba(0, 0, 0, 0.75)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}
+                          >
+                            {new Date(event.date).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
                     {/* Subtle shadow for depth */}
                     <View
                       style={{
@@ -316,7 +347,6 @@ export default function HomeScreen() {
                     height: 8,
                     borderRadius: 4,
                     backgroundColor: index === currentSlide ? '#FFFFFF' : '#374151',
-                    transition: 'all 0.3s ease',
                   }}
                 />
               ))}
