@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,11 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Modal } from '@/components/Modal';
 import { useAppStore } from '@/store/useAppStore';
 import { authAPI } from '@/lib/api/auth';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -44,6 +45,27 @@ export default function SettingsScreen() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalMessage, setSuccessModalMessage] = useState('');
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const response = await authAPI.getProfile();
+      if (response.success && response.user) {
+        setUser(response.user);
+        setName(response.user.fullName || '');
+        setEmail(response.user.email || '');
+      }
+    } catch (_) {
+      // Ignore refresh errors
+    } finally {
+      setRefreshing(false);
+    }
+  }, [setUser]);
 
   const handleUpdateName = async () => {
     if (!name.trim()) {
@@ -52,7 +74,7 @@ export default function SettingsScreen() {
     }
 
     if (name === user?.fullName) {
-      Alert.alert('Info', 'No changes made');
+      setShowInfoModal(true);
       return;
     }
 
@@ -64,7 +86,8 @@ export default function SettingsScreen() {
         if (response.user) {
           setUser(response.user);
         }
-        Alert.alert('Success', 'Name updated successfully');
+        setSuccessModalMessage('Name updated successfully');
+        setShowSuccessModal(true);
       } else {
         setNameError(response.message || 'Failed to update name');
       }
@@ -82,7 +105,7 @@ export default function SettingsScreen() {
     }
 
     if (email === user?.email) {
-      Alert.alert('Info', 'No changes made');
+      setShowInfoModal(true);
       return;
     }
 
@@ -101,7 +124,8 @@ export default function SettingsScreen() {
         if (response.user) {
           setUser(response.user);
         }
-        Alert.alert('Success', 'Email updated successfully');
+        setSuccessModalMessage('Email updated successfully');
+        setShowSuccessModal(true);
         setEmail(email.trim());
       } else {
         setEmailError(response.message || 'Failed to update email');
@@ -134,13 +158,11 @@ export default function SettingsScreen() {
     try {
       const response = await authAPI.updateUser({ password: newPassword });
       if (response.success) {
-        Alert.alert('Success', 'Password updated successfully', [
-          { text: 'OK', onPress: () => {
-            setCurrentPassword('');
-            setNewPassword('');
-            setConfirmPassword('');
-          }}
-        ]);
+        setSuccessModalMessage('Password updated successfully');
+        setShowSuccessModal(true);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
       } else {
         setPasswordError(response.message || 'Failed to update password');
       }
@@ -151,20 +173,13 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleLogout = async () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          await performLogout();
-        },
-      },
-    ]);
+  const handleLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    setShowLogoutModal(false);
+    await performLogout();
   };
 
   const performLogout = async () => {
@@ -210,6 +225,14 @@ export default function SettingsScreen() {
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#9333EA"
+            colors={["#9333EA"]}
+          />
+        }
       >
         {/* Header */}
         <View className="flex-row items-center justify-between pt-[60px] px-5 pb-5">
@@ -415,6 +438,35 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showInfoModal}
+        onClose={() => setShowInfoModal(false)}
+        title="Info"
+        message="No changes made."
+        primaryButtonText="OK"
+        onPrimaryPress={() => setShowInfoModal(false)}
+        variant="info"
+      />
+      <Modal
+        visible={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title="Success"
+        message={successModalMessage}
+        primaryButtonText="OK"
+        onPrimaryPress={() => setShowSuccessModal(false)}
+        variant="success"
+      />
+      <Modal
+        visible={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        title="Logout"
+        message="Are you sure you want to logout?"
+        primaryButtonText="Logout"
+        secondaryButtonText="Cancel"
+        onPrimaryPress={confirmLogout}
+        variant="info"
+      />
     </KeyboardAvoidingView>
   );
 }

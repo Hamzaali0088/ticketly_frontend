@@ -26,6 +26,7 @@ export default function TicketScreen() {
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Payment upload states
@@ -120,7 +121,7 @@ export default function TicketScreen() {
     fetchTicket();
   }, [id]);
 
-  // Refresh ticket after payment submission
+  // Refresh ticket after payment submission or pull-to-refresh
   const refreshTicket = async () => {
     if (!id) return;
     try {
@@ -131,6 +132,12 @@ export default function TicketScreen() {
     } catch (err) {
       console.error('Error refreshing ticket:', err);
     }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refreshTicket();
+    setRefreshing(false);
   };
 
   // Pick payment screenshot from gallery
@@ -329,6 +336,14 @@ export default function TicketScreen() {
       className="flex-1 bg-[#0F0F0F]"
       contentContainerStyle={{ paddingBottom: 40 }}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor="#9333EA"
+          colors={["#9333EA"]}
+        />
+      }
     >
       {/* Header */}
       <View className="flex-row items-center justify-between pt-[60px] px-5 pb-5">

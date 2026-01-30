@@ -1,16 +1,29 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Image, Modal, Pressable, ScrollView, Dimensions } from 'react-native';
 import { Event } from '@/data/mockData';
 import { useRouter } from 'expo-router';
 import { getEventImageUrl } from '@/lib/utils/imageUtils';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const DROPUP_HEIGHT = Math.min(SCREEN_HEIGHT * 0.5, 400);
 
 interface EventCardProps {
   event: Event;
   onPress?: () => void;
 }
 
+type JoinedUser = {
+  id?: string;
+  _id?: string;
+  name?: string;
+  fullName?: string;
+  avatarUrl?: string | null;
+  profileImageUrl?: string | null;
+};
+
 export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
   const router = useRouter();
+  const [joinedUsersDropUpVisible, setJoinedUsersDropUpVisible] = useState(false);
 
   const handlePress = () => {
     if (onPress) {
@@ -40,7 +53,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
   const hostAvatarUrl = event.hostAvatarUrl || event.image;
   const joinedUsers = event.joinedUsers || [];
   const joinedCount = event.joinedCount ?? joinedUsers.length ?? 0;
-  const visibleJoined = joinedUsers.slice(0, 2);
+  const visibleJoined = joinedUsers.slice(0, 3);
   const remainingCount = Math.max(joinedCount - visibleJoined.length, 0);
 
   return (
@@ -49,7 +62,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
       onPress={handlePress}
       activeOpacity={0.8}
     >
-      <View className="w-full h-[180px] relative">
+      <View className="w-full h-[150px] relative">
         <Image
           source={{ uri: getEventImageUrl(event) || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800' }}
           className="w-full h-full"
@@ -61,34 +74,58 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
             {priceLabel}
           </Text>
         </View>
-        {/* Joined users avatars pill on image */}
-        {(joinedUsers.length > 0 || hostAvatarUrl) && (
-          <View className="absolute bottom-0 right-2 flex-row items-center translate-y-1/2">
-            {/* Joined users (small overlapping avatars) */}
-            {joinedUsers.length > 0 && (
-              <View className="flex-row items-center bg-black/80 rounded-full p-1 mr-1">
-                {visibleJoined.map((user, index) => (
+        {/* Joined users avatars pill on image (or count when list not loaded) */}
+        {(joinedUsers.length > 0 || joinedCount > 0 || hostAvatarUrl) && (
+          <View className="absolute bottom-0 h-5 right-[-5px] flex-row items-center translate-y-1/2">
+            {/* Joined users: avatars when available, or "X going" pill when only count is known */}
+            {joinedUsers.length > 0 ? (
+              <TouchableOpacity
+                className="flex-row items-center rounded-full p-1 mr-1 pr-4"
+                activeOpacity={0.9}
+                onPress={(e) => {
+                  e?.stopPropagation?.();
+                  setJoinedUsersDropUpVisible(true);
+                }}
+              >
+                {visibleJoined.map((user, index) => {
+                  const u = user as JoinedUser;
+                  return (
                   <Image
-                    key={user.id}
+                    key={u.id || u._id || index}
                     source={{
                       uri:
-                        user.avatarUrl ||
+                        u.avatarUrl ||
+                        u.profileImageUrl ||
                         'https://images.unsplash.com/photo-1494797710133-75adf6c1f4a3?w=200',
                     }}
-                    className="w-5 h-5 rounded-full border border-[#111827]"
+                    className="w-7 h-7 rounded-full border border-[#111827]"
                     style={{ marginLeft: index === 0 ? 0 : -6 }}
                     resizeMode="cover"
                   />
-                ))}
+                  );
+                })}
                 {remainingCount > 0 && (
-                  <View className="ml-1 px-1.5 py-[1px] rounded-full bg-[#111827]">
+                  <View className="px-1.5 mr-1 py-[1px] absolute right-[8px] h-4 min-w-5 rounded-full bg-[#111827]">
                     <Text className="text-white text-[8px] font-medium">
                       +{remainingCount}
                     </Text>
                   </View>
                 )}
-              </View>
-            )}
+              </TouchableOpacity>
+            ) : joinedCount > 0 ? (
+              <TouchableOpacity
+                className="rounded-full bg-[#111827] px-2 py-1 mr-1"
+                activeOpacity={0.9}
+                onPress={(e) => {
+                  e?.stopPropagation?.();
+                  setJoinedUsersDropUpVisible(true);
+                }}
+              >
+                <Text className="text-white text-[9px] font-medium">
+                  {joinedCount} going
+                </Text>
+              </TouchableOpacity>
+            ) : null}
 
             {/* Host avatar on image (slightly larger) */}
 
@@ -98,14 +135,14 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
       </View>
       <View className="p-3">
         {/* Date & time row (e.g. 15 Feb 11:00) */}
-        <Text className="text-[#9CA3AF] text-[11px] mb-1">
+        <Text className="text-[#9CA3AF] text-[9px] mb-1">
           {new Date(event.date).toLocaleDateString('en-GB', {
             day: '2-digit',
             month: 'short',
           })}{' '}
           {event.time}
         </Text>
-        <Text className="text-white text-base font-semibold mb-2" numberOfLines={2}>
+        <Text className="text-white text-[13px] font-semibold mb-2" numberOfLines={2}>
           {event.title}
         </Text>
         {/* <View className="flex-row items-center">
@@ -127,20 +164,75 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
                       hostAvatarUrl ||
                       'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
                   }}
-                  className="w-5 h-5 rounded-full border border-[#111827] bg-black/80"
+                  className="w-7 h-7 rounded-full border border-[#111827] bg-black/80"
                   resizeMode="cover"
                 />
               )}
               <View>
-                <Text className="text-white text-xs font-semibold" numberOfLines={1}>
+                <Text className="text-white text-[10px] font-semibold max-w-[100px]" numberOfLines={1}>
                   {event.organizerName || 'Host'}
                 </Text>
-                <Text className="text-[#9CA3AF] text-[10px]">(Host)</Text>
+                <Text className="text-[#9CA3AF] text-[9px]">(Host)</Text>
               </View>
             </View>
           </View>
         )}
       </View>
+
+      {/* Joined users drop-up (bottom to middle) */}
+      <Modal
+        visible={joinedUsersDropUpVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setJoinedUsersDropUpVisible(false)}
+      >
+        <Pressable
+          className="flex-1 justify-end bg-black/50"
+          onPress={() => setJoinedUsersDropUpVisible(false)}
+        >
+          <Pressable
+            className="bg-[#1F1F1F] rounded-t-2xl border-t border-[#374151]"
+            style={{ minHeight: DROPUP_HEIGHT, maxHeight: DROPUP_HEIGHT }}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {/* Handle bar */}
+            <View className="items-center pt-2 pb-1">
+              <View className="w-10 h-1 rounded-full bg-[#4B5563]" />
+            </View>
+            <Text className="text-white text-sm font-semibold px-4 pb-2">
+              Joined ({joinedCount > 0 ? joinedCount : joinedUsers.length})
+            </Text>
+            <ScrollView
+              className="flex-1 px-4 pb-6"
+              showsVerticalScrollIndicator={false}
+            >
+              {joinedUsers.length === 0 && joinedCount > 0 ? (
+                <Text className="text-[#9CA3AF] text-sm py-4">No attendee list available</Text>
+              ) : null}
+              {joinedUsers.map((user: JoinedUser, index: number) => (
+                <View
+                  key={user.id || user._id || `user-${index}`}
+                  className="flex-row items-center py-3 border-b border-[#374151]/50"
+                >
+                  <Image
+                    source={{
+                      uri:
+                        user.avatarUrl ||
+                        user.profileImageUrl ||
+                        'https://images.unsplash.com/photo-1494797710133-75adf6c1f4a3?w=200',
+                    }}
+                    className="w-10 h-10 rounded-full bg-[#374151]"
+                    resizeMode="cover"
+                  />
+                  <Text className="text-white text-base font-medium ml-3 flex-1" numberOfLines={1}>
+                    {user.name || user.fullName || 'User'}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </TouchableOpacity>
   );
 };

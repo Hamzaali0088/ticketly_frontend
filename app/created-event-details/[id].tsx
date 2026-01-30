@@ -8,8 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
-  Alert,
-  Modal,
+  Modal as RNModal,
   Pressable,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -19,6 +18,7 @@ import { ticketsAPI } from '@/lib/api/tickets';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { getEventImageUrl } from '@/lib/utils/imageUtils';
 import { QRScanner } from '@/components/QRScanner';
+import { Modal } from '@/components/Modal';
 
 type TicketStatus = 'all' | 'pending_payment' | 'payment_in_review' | 'confirmed' | 'used' | 'cancelled';
 
@@ -58,6 +58,10 @@ export default function CreatedEventDetailsScreen() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalMessage, setSuccessModalMessage] = useState('');
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
 
   // Get event ID helper
   const getEventId = () => {
@@ -189,7 +193,8 @@ export default function CreatedEventDetailsScreen() {
         
         // Show success message after modal is closed
         setTimeout(() => {
-          Alert.alert('Success', response.message || 'Ticket status updated successfully');
+          setSuccessModalMessage(response.message || 'Ticket status updated successfully');
+          setShowSuccessModal(true);
         }, 300);
       }
     } catch (error: any) {
@@ -219,9 +224,8 @@ export default function CreatedEventDetailsScreen() {
       
       // Set error state to display in modal
       setUpdateError(errorMessage);
-      
-      // Also show alert as fallback
-      Alert.alert('Error', errorMessage);
+      setErrorModalMessage(errorMessage);
+      setShowErrorModal(true);
     } finally {
       setUpdatingStatus(false);
     }
@@ -429,12 +433,42 @@ export default function CreatedEventDetailsScreen() {
               </View>
             </View>
 
-            {/* Location */}
+            {/* Location (optional) */}
+            {event.location ? (
+              <View className="flex-row mb-5 items-start">
+                <MaterialIcons name="location-on" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+                <View className="flex-1">
+                  <Text className="text-white text-sm font-semibold mb-1">Location</Text>
+                  <Text className="text-[#D1D5DB] text-sm mb-0.5">{event.location}</Text>
+                </View>
+              </View>
+            ) : null}
+
+            {/* Gender (optional) */}
+            {event.gender ? (
+              <View className="flex-row mb-5 items-start">
+                <MaterialIcons name="person-outline" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+                <View className="flex-1">
+                  <Text className="text-white text-sm font-semibold mb-1">Gender</Text>
+                  <Text className="text-[#D1D5DB] text-sm mb-0.5 capitalize">{event.gender}</Text>
+                </View>
+              </View>
+            ) : null}
+
+            {/* Price */}
             <View className="flex-row mb-5 items-start">
-              <MaterialIcons name="location-on" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+              <MaterialIcons name="confirmation-number" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
               <View className="flex-1">
-                <Text className="text-white text-sm font-semibold mb-1">Location</Text>
-                <Text className="text-[#D1D5DB] text-sm mb-0.5">{event.location}</Text>
+                <Text className="text-white text-sm font-semibold mb-1">Ticket Price</Text>
+                <Text className="text-[#D1D5DB] text-sm mb-0.5">
+                  {event.price?.price === 'free' || event.price?.currency === null
+                    ? 'Free'
+                    : event.price?.currency
+                      ? `${event.price.currency} ${Number(event.price.price).toLocaleString()}`
+                      : event.ticketPrice
+                        ? `PKR ${event.ticketPrice.toLocaleString()}`
+                        : 'Free'}
+                </Text>
               </View>
             </View>
 
@@ -593,8 +627,27 @@ export default function CreatedEventDetailsScreen() {
         </View>
       </ScrollView>
 
-      {/* Update Ticket Status Modal */}
       <Modal
+        visible={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title="Success"
+        message={successModalMessage}
+        primaryButtonText="OK"
+        onPrimaryPress={() => setShowSuccessModal(false)}
+        variant="success"
+      />
+      <Modal
+        visible={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title="Error"
+        message={errorModalMessage}
+        primaryButtonText="OK"
+        onPrimaryPress={() => setShowErrorModal(false)}
+        variant="error"
+      />
+
+      {/* Update Ticket Status Modal */}
+      <RNModal
         visible={updateModalOpen}
         transparent
         animationType="fade"
@@ -752,7 +805,7 @@ export default function CreatedEventDetailsScreen() {
             </View>
           </Pressable>
         </Pressable>
-      </Modal>
+      </RNModal>
 
       {/* QR Scanner Modal */}
       <QRScanner

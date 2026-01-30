@@ -7,10 +7,10 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Modal } from '@/components/Modal';
 import { useAppStore } from '@/store/useAppStore';
 import { authAPI } from '@/lib/api/auth';
 import { getAccessToken, getRefreshToken, setTokens } from '@/lib/api/client';
@@ -20,6 +20,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 export default function LoginScreen() {
   const router = useRouter();
   const login = useAppStore((state) => state.login);
+  const setUser = useAppStore((state) => state.setUser);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [loginMethod, setLoginMethod] = useState<'google' | 'email' | null>(null);
   const [name, setName] = useState('');
@@ -34,6 +35,8 @@ export default function LoginScreen() {
   const [loginError, setLoginError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{ title: string; message: string; variant: 'default' | 'success' | 'error' | 'info' }>({ title: '', message: '', variant: 'info' });
 
   // Silently check auth on mount - if already authenticated, redirect to home
   useEffect(() => {
@@ -104,7 +107,8 @@ export default function LoginScreen() {
             break;
         }
         
-        Alert.alert('Login Error', errorMessage);
+        setAlertConfig({ title: 'Login Error', message: errorMessage, variant: 'error' });
+        setShowAlertModal(true);
         
         // Clear the error from URL
         if (window.history) {
@@ -126,11 +130,12 @@ export default function LoginScreen() {
       window.location.href = googleAuthUrl;
     } else {
       // For mobile, show info that it's web-only for now
-      Alert.alert(
-        'Google Login',
-        'Google OAuth is currently supported on web. Please use the web version or login with email/password.',
-        [{ text: 'OK' }]
-      );
+      setAlertConfig({
+        title: 'Google Login',
+        message: 'Google OAuth is currently supported on web. Please use the web version or login with email/password.',
+        variant: 'info',
+      });
+      setShowAlertModal(true);
       
       // TODO: For mobile OAuth, you would need to implement expo-auth-session
       // Example:
@@ -165,7 +170,12 @@ export default function LoginScreen() {
         setMode('login');
         setLoginMethod('email');
 
-        Alert.alert('Success', 'Account created successfully! Please login with your email and password.');
+        setAlertConfig({
+          title: 'Success',
+          message: 'Account created successfully! Please login with your email and password.',
+          variant: 'success',
+        });
+        setShowAlertModal(true);
       } else {
         // Show backend error message inline
         setErrorMessage(response.message || 'Failed to create account');
@@ -210,13 +220,22 @@ export default function LoginScreen() {
           login(userProfile);
           // Redirect to home page (tabs)
           router.replace('/(tabs)');
+          // Populate profile cache in background so profile tab shows data from storage without waiting for API
+          authAPI.getProfile().then((res) => {
+            if (res.success && res.user) setUser(res.user);
+          }).catch(() => {});
           // Note: No need to set loading to false as we're redirecting
         } else if (response.tempToken) {
           // User is not verified - show OTP form
           setLoginError('');
           setTempToken(response.tempToken);
           setOtpSent(true);
-          Alert.alert('OTP Sent', `OTP has been sent to ${email}. Please check your email.`);
+          setAlertConfig({
+            title: 'OTP Sent',
+            message: `OTP has been sent to ${email}. Please check your email.`,
+            variant: 'success',
+          });
+          setShowAlertModal(true);
           setLoading(false);
         } else {
           // Show backend error message inline
@@ -271,6 +290,10 @@ export default function LoginScreen() {
         login(response.user);
         // Redirect to home page immediately after successful login
         router.replace('/(tabs)');
+        // Populate profile cache in background so profile tab shows data from storage without waiting for API
+        authAPI.getProfile().then((res) => {
+          if (res.success && res.user) setUser(res.user);
+        }).catch(() => {});
         // Note: No need to set loading to false as we're redirecting
       } else {
         // Show backend error message inline
@@ -624,6 +647,16 @@ export default function LoginScreen() {
 
         <Text className="text-[#6B7280] text-xs text-center">2025 Ticketly. All rights reserved.</Text>
       </ScrollView>
+
+      <Modal
+        visible={showAlertModal}
+        onClose={() => setShowAlertModal(false)}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        primaryButtonText="OK"
+        onPrimaryPress={() => setShowAlertModal(false)}
+        variant={alertConfig.variant}
+      />
     </View>
   );
 }

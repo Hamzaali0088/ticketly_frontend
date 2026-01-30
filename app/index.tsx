@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { Redirect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAccessToken, getRefreshToken } from '@/lib/api/client';
-import { authAPI } from '@/lib/api/auth';
+import { authAPI, PROFILE_CACHE_KEY } from '@/lib/api/auth';
 import { useAppStore } from '@/store/useAppStore';
 
 export default function Index() {
@@ -15,11 +16,25 @@ export default function Index() {
         const accessToken = await getAccessToken();
         
         if (accessToken) {
-          // Try to get user profile to verify token is valid
+          // Show profile from cache immediately so profile tab has data without waiting for API
+          try {
+            const raw = await AsyncStorage.getItem(PROFILE_CACHE_KEY);
+            if (raw) {
+              const cached = JSON.parse(raw) as { success?: boolean; user?: any };
+              if (cached?.user) {
+                const u = cached.user;
+                if (!u._id && u.id) u._id = u.id;
+                login(u);
+              }
+            }
+          } catch (_) {
+            // Ignore cache parse errors
+          }
+
+          // Then fetch fresh profile in background to verify token and update cache
           try {
             const response = await authAPI.getProfile();
             if (response.success && response.user) {
-              // User is authenticated, silently login
               login(response.user);
               return;
             }

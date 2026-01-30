@@ -5,10 +5,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
   ActivityIndicator,
   TextInput,
   RefreshControl,
+  Modal as RNModal,
+  Pressable,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAppStore } from '@/store/useAppStore';
@@ -38,6 +39,11 @@ export default function EventDetailsScreen() {
   const [creatingTicket, setCreatingTicket] = useState(false);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [phoneInput, setPhoneInput] = useState('');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginModalMessage, setLoginModalMessage] = useState('');
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
+  const [showInvalidPhoneModal, setShowInvalidPhoneModal] = useState(false);
   const [userTicketId, setUserTicketId] = useState<string | null>(null);
   const [userTickets, setUserTickets] = useState<any[]>([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
@@ -162,10 +168,8 @@ export default function EventDetailsScreen() {
   const handleLike = () => {
     const isAuthenticated = useAppStore.getState().isAuthenticated;
     if (!isAuthenticated) {
-      Alert.alert('Login Required', 'Please login to like events', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => router.push('/login') },
-      ]);
+      setLoginModalMessage('Please login to like events.');
+      setShowLoginModal(true);
       return;
     }
     if (user && event) {
@@ -179,10 +183,8 @@ export default function EventDetailsScreen() {
   const handleRegister = async () => {
     const isAuthenticated = useAppStore.getState().isAuthenticated;
     if (!isAuthenticated) {
-      Alert.alert('Login Required', 'Please login to register for events', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => router.push('/login') },
-      ]);
+      setLoginModalMessage('Please login to register for events.');
+      setShowLoginModal(true);
       return;
     }
     if (!user || !event) return;
@@ -246,7 +248,8 @@ export default function EventDetailsScreen() {
     } catch (error: any) {
       console.error('Error creating ticket:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to create ticket';
-      Alert.alert('Error', errorMessage);
+      setErrorModalMessage(errorMessage);
+      setShowErrorModal(true);
     } finally {
       setCreatingTicket(false);
       setShowPhoneModal(false);
@@ -256,7 +259,7 @@ export default function EventDetailsScreen() {
 
   const handlePhoneSubmit = () => {
     if (!phoneInput.trim() || phoneInput.trim().length < 10) {
-      Alert.alert('Invalid Phone', 'Please enter a valid phone number (at least 10 digits)');
+      setShowInvalidPhoneModal(true);
       return;
     }
     if (!event) return;
@@ -352,24 +355,43 @@ export default function EventDetailsScreen() {
             </View>
           </View>
 
-          {/* Location */}
-          <View className="flex-row mb-5 items-start">
-            <MaterialIcons name="location-on" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
-            <View className="flex-1">
-              <Text className="text-white text-sm font-semibold mb-1">Location</Text>
-              <Text className="text-[#D1D5DB] text-sm mb-0.5">{event.location}</Text>
+          {/* Location (optional) */}
+          {event.location ? (
+            <View className="flex-row mb-5 items-start">
+              <MaterialIcons name="location-on" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+              <View className="flex-1">
+                <Text className="text-white text-sm font-semibold mb-1">Location</Text>
+                <Text className="text-[#D1D5DB] text-sm mb-0.5">{event.location}</Text>
+              </View>
             </View>
-          </View>
+          ) : null}
 
-          {/* Price */}
+          {/* Gender (optional) */}
+          {event.gender ? (
+            <View className="flex-row mb-5 items-start">
+              <MaterialIcons name="person-outline" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+              <View className="flex-1">
+                <Text className="text-white text-sm font-semibold mb-1">Gender</Text>
+                <Text className="text-[#D1D5DB] text-sm mb-0.5 capitalize">{event.gender}</Text>
+              </View>
+            </View>
+          ) : null}
+
+          {/* Price: event.price { price, currency } or free; fallback ticketPrice */}
           <View className="flex-row mb-5 items-start">
             <MaterialIcons name="confirmation-number" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
             <View className="flex-1">
               <Text className="text-white text-sm font-semibold mb-1">Ticket Price</Text>
               <Text className="text-[#D1D5DB] text-sm mb-0.5">
-                {event.ticketPrice ? `PKR ${event.ticketPrice.toLocaleString()}` : 'Free'}
+                {event.price?.price === 'free' || event.price?.currency === null
+                  ? 'Free'
+                  : event.price?.currency
+                    ? `${event.price.currency} ${Number(event.price.price).toLocaleString()}`
+                    : event.ticketPrice
+                      ? `PKR ${event.ticketPrice.toLocaleString()}`
+                      : 'Free'}
               </Text>
-              {event.totalTickets && (
+              {event.totalTickets != null && event.totalTickets > 0 && (
                 <Text className="text-[#9CA3AF] text-xs mt-1">
                   {event.totalTickets} tickets available
                 </Text>
@@ -394,13 +416,15 @@ export default function EventDetailsScreen() {
 
         </View>
 
-        {/* Event Description Section */}
-        <View className="p-5 border-t border-[#1F1F1F]">
-          <Text className="text-white text-xl font-bold mb-3">Event Description</Text>
-          <Text className="text-[#D1D5DB] text-sm leading-6 mb-3">
-            {event.description}
-          </Text>
-        </View>
+        {/* Event Description Section (optional) */}
+        {event.description ? (
+          <View className="p-5 border-t border-[#1F1F1F]">
+            <Text className="text-white text-xl font-bold mb-3">Event Description</Text>
+            <Text className="text-[#D1D5DB] text-sm leading-6 mb-3">
+              {event.description}
+            </Text>
+          </View>
+        ) : null}
 
         {/* Contact Information */}
         {(event.email || event.phone) && (
@@ -421,13 +445,18 @@ export default function EventDetailsScreen() {
           </View>
         )}
 
-        {/* Organized By */}
-        {event.createdBy && (
+        {/* Organized By: createdBy or organizerName */}
+        {(event.createdBy || event.organizerName) && (
           <View className="p-5 border-t border-[#1F1F1F]">
             <Text className="text-white text-xl font-bold mb-3">Organized By</Text>
-            <Text className="text-white text-base font-semibold">{event.createdBy.fullName}</Text>
-            {event.createdBy.email && (
+            <Text className="text-white text-base font-semibold">
+              {event.createdBy?.fullName ?? event.organizerName ?? '—'}
+            </Text>
+            {event.createdBy?.email && (
               <Text className="text-[#9CA3AF] text-sm mt-1">{event.createdBy.email}</Text>
+            )}
+            {event.email && !event.createdBy?.email && (
+              <Text className="text-[#9CA3AF] text-sm mt-1">{event.email}</Text>
             )}
           </View>
         )}
@@ -605,18 +634,59 @@ export default function EventDetailsScreen() {
             router.push(`/ticket/${eventId}`);
           }
         }}
+        variant="success"
       />
 
-      {/* Phone Number Modal */}
-      {showPhoneModal && (
-        <View className="absolute inset-0 bg-black/70 justify-center items-center p-5 z-50">
-          <View className="bg-[#1F1F1F] rounded-2xl p-6 w-full max-w-[400px]">
+      <Modal
+        visible={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        title="Login Required"
+        message={loginModalMessage}
+        primaryButtonText="Login"
+        secondaryButtonText="Cancel"
+        onPrimaryPress={() => {
+          setShowLoginModal(false);
+          router.push('/login');
+        }}
+        variant="info"
+      />
+      <Modal
+        visible={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title="Error"
+        message={errorModalMessage}
+        primaryButtonText="OK"
+        onPrimaryPress={() => setShowErrorModal(false)}
+        variant="error"
+      />
+      <Modal
+        visible={showInvalidPhoneModal}
+        onClose={() => setShowInvalidPhoneModal(false)}
+        title="Invalid Phone"
+        message="Please enter a valid phone number (at least 10 digits)."
+        primaryButtonText="OK"
+        onPrimaryPress={() => setShowInvalidPhoneModal(false)}
+        variant="error"
+      />
+
+      {/* Phone Number Modal - custom content, same theme */}
+      <RNModal
+        visible={showPhoneModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => { setShowPhoneModal(false); setPhoneInput(''); }}
+      >
+        <Pressable className="flex-1 bg-black/70 justify-center items-center p-5" onPress={() => { setShowPhoneModal(false); setPhoneInput(''); }}>
+          <Pressable className="bg-[#1F1F1F] rounded-2xl border border-[#374151] p-6 w-full max-w-[400px]" onPress={(e) => e.stopPropagation()}>
+            <View className="items-center pt-1 pb-3">
+              <View className="w-10 h-1 rounded-full bg-[#4B5563]" />
+            </View>
             <Text className="text-white text-xl font-bold mb-2 text-center">Phone Number Required</Text>
             <Text className="text-[#D1D5DB] text-base leading-6 mb-4 text-center">
               Please enter your phone number to create a ticket
             </Text>
             <TextInput
-              className="bg-[#374151] text-white px-4 py-3 rounded-xl mb-4"
+              className="bg-[#374151] text-white px-4 py-3 rounded-xl mb-4 border border-[#4B5563]"
               placeholder="Enter your phone number"
               placeholderTextColor="#9CA3AF"
               value={phoneInput}
@@ -626,11 +696,8 @@ export default function EventDetailsScreen() {
             />
             <View className="flex-row gap-3">
               <TouchableOpacity
-                className="flex-1 py-3.5 rounded-xl items-center bg-[#2F2F2F]"
-                onPress={() => {
-                  setShowPhoneModal(false);
-                  setPhoneInput('');
-                }}
+                className="flex-1 py-3.5 rounded-xl items-center bg-[#2F2F2F] border border-[#374151]"
+                onPress={() => { setShowPhoneModal(false); setPhoneInput(''); }}
               >
                 <Text className="text-white text-base font-semibold">Cancel</Text>
               </TouchableOpacity>
@@ -646,9 +713,9 @@ export default function EventDetailsScreen() {
                 )}
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
-      )}
+          </Pressable>
+        </Pressable>
+      </RNModal>
     </View>
   );
 }

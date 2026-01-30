@@ -1,6 +1,7 @@
 // Zustand store for app state management
 import { create } from 'zustand';
 import { User, Event } from '@/data/mockData';
+import { authAPI } from '@/lib/api/auth';
 import { clearTokens } from '@/lib/api/client';
 import type { UserProfile } from '@/lib/api/auth';
 
@@ -72,13 +73,11 @@ export const useAppStore = create<AppState>((set) => ({
   
   logout: async () => {
     try {
-      // Clear all tokens from storage
+      await authAPI.clearProfileCache();
       await clearTokens();
-      // Clear user state
       set({ user: null, isAuthenticated: false, events: [] });
     } catch (error) {
       console.error('Logout error:', error);
-      // Even if there's an error, clear the state
       set({ user: null, isAuthenticated: false, events: [] });
     }
   },

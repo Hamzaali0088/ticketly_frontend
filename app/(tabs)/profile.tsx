@@ -1,5 +1,6 @@
 import { EventCard } from '@/components/EventCard';
-import { authAPI } from '@/lib/api/auth';
+import { EventCardSkeleton } from '@/components/EventCardSkeleton';
+import { authAPI, PROFILE_CACHE_KEY } from '@/lib/api/auth';
 import { eventsAPI } from '@/lib/api/events';
 import { API_BASE_URL } from '@/lib/config';
 import { useAppStore } from '@/store/useAppStore';
@@ -8,10 +9,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { getEventImageUrl } from '@/lib/utils/imageUtils';
+import { getEventImageUrl, getProfileImageUrl } from '@/lib/utils/imageUtils';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Platform,
   RefreshControl,
@@ -20,6 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Modal } from '@/components/Modal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Token storage keys (must match client.ts)
@@ -35,11 +36,12 @@ const convertEvent = (apiEvent: any) => {
     console.warn('⚠️ Event missing ID:', apiEvent);
   }
 
+  const dateStr = apiEvent.date ? (String(apiEvent.date).includes('T') ? String(apiEvent.date).split('T')[0] : apiEvent.date) : '';
   return {
     id: eventId || '',
     title: apiEvent.title || '',
     description: apiEvent.description || '',
-    date: apiEvent.date || '',
+    date: dateStr,
     time: apiEvent.time || '',
     venue: apiEvent.location || '',
     city: (apiEvent.location || '').split(',')[0] || apiEvent.location || '',
@@ -51,6 +53,13 @@ const convertEvent = (apiEvent: any) => {
     accessType: (apiEvent.ticketPrice || 0) > 0 ? 'paid' as const : 'open' as const,
     registeredUsers: [],
     likedUsers: [],
+    hostAvatarUrl: apiEvent.createdBy ? getProfileImageUrl(apiEvent.createdBy as any) : null,
+    joinedUsers: (apiEvent.joinedUsers || []).map((u: any) => ({
+      id: u._id || u.id,
+      name: u.name || u.fullName,
+      avatarUrl: u.profileImageUrl || u.avatarUrl,
+    })),
+    joinedCount: apiEvent.joinedCount ?? (apiEvent.joinedUsers?.length ?? 0),
   };
 };
 
@@ -68,6 +77,13 @@ export default function ProfileScreen() {
   const [joinedEventsData, setJoinedEventsData] = useState<any[]>([]); // Store full data with tickets
   const [likedEvents, setLikedEvents] = useState<any[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [hasCheckedCache, setHasCheckedCache] = useState(false);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalMessage, setSuccessModalMessage] = useState('');
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const hasLoadedRef = useRef(false);
   const currentUserIdRef = useRef<string | null>(null);
 
@@ -104,7 +120,7 @@ export default function ProfileScreen() {
             return `${baseUrl}${path}`;
           }
         }
-      } ``
+      }
       return user.profileImageUrl;
     }
 
@@ -124,7 +140,7 @@ export default function ProfileScreen() {
       // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'We need access to your photos to upload profile images.');
+        setShowPermissionModal(true);
         return;
       }
 
@@ -153,7 +169,8 @@ export default function ProfileScreen() {
       }
     } catch (error: any) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      setErrorModalMessage('Failed to pick image. Please try again.');
+      setShowErrorModal(true);
     }
   };
 
@@ -179,10 +196,12 @@ export default function ProfileScreen() {
           });
         }
 
-        Alert.alert('Success', 'Profile image uploaded successfully!');
+        setSuccessModalMessage('Profile image uploaded successfully!');
+        setShowSuccessModal(true);
       } else {
         console.error('❌ Upload failed - response not successful:', response);
-        Alert.alert('Error', response.message || 'Failed to upload profile image');
+        setErrorModalMessage(response.message || 'Failed to upload profile image');
+        setShowErrorModal(true);
       }
     } catch (error: any) {
       console.error('❌ Upload error caught:', {
@@ -190,10 +209,8 @@ export default function ProfileScreen() {
         response: error.response?.data,
         status: error.response?.status,
       });
-      Alert.alert(
-        'Upload Failed',
-        error.response?.data?.message || error.message || 'Failed to upload profile image. Please try again.'
-      );
+      setErrorModalMessage(error.response?.data?.message || error.message || 'Failed to upload profile image. Please try again.');
+      setShowErrorModal(true);
     } finally {
       setUploadingImage(false);
     }
@@ -220,82 +237,69 @@ export default function ProfileScreen() {
       // 3. User doesn't have full event data (empty arrays or undefined)
       const needsFullData = !hasFullEventData || !hasFullJoinedData || createdEventsIsStrings || joinedEventsIsStrings;
 
-      // Always load on first mount, or if we need full data
-      if (!hasLoadedRef.current) {
-        hasLoadedRef.current = true;
-        loadProfile();
-      } else if (needsFullData) {
-        // Reload if we don't have full data
-        loadProfile();
-      }
+      // Load cached profile first for instant display, then fetch fresh data
+      (async () => {
+        if (!hasLoadedRef.current) {
+          hasLoadedRef.current = true;
+          const hadCache = await loadProfileFromCache();
+          await loadProfile(false, hadCache);
+        } else if (needsFullData) {
+          await loadProfile();
+        }
+      })();
     }
   }, [user?._id]); // Only depend on user ID, but check data inside effect
 
-  // Refresh profile when screen comes into focus
+  // When profile tab gains focus: always load from cache first (so content shows immediately), then refresh in background
   useFocusEffect(
     useCallback(() => {
-      if (user?._id) {
-        // Check if user has full event data (objects) or just IDs (strings) or empty
-        const createdEventsIsStrings = user.createdEvents && Array.isArray(user.createdEvents) && user.createdEvents.length > 0 && typeof user.createdEvents[0] === 'string';
-        const joinedEventsIsStrings = user.joinedEvents && Array.isArray(user.joinedEvents) && user.joinedEvents.length > 0 && typeof user.joinedEvents[0] === 'string';
-        const hasFullEventData = user.createdEvents && Array.isArray(user.createdEvents) && user.createdEvents.length > 0 && typeof user.createdEvents[0] === 'object';
-        const hasFullJoinedData = user.joinedEvents && Array.isArray(user.joinedEvents) && user.joinedEvents.length > 0 && typeof user.joinedEvents[0] === 'object' && (user.joinedEvents[0] as any).event;
-
-        // Always load profile if user has only IDs or doesn't have full data
-        if (createdEventsIsStrings || joinedEventsIsStrings || !hasFullEventData || !hasFullJoinedData) {
-          loadProfile(true);
+      (async () => {
+        await loadProfileFromCache();
+        setHasCheckedCache(true);
+        const currentUser = useAppStore.getState().user;
+        if (currentUser?._id) {
+          loadProfile(true, true);
         }
-      }
-    }, [user?._id])
+      })();
+    }, [])
   );
 
-  const loadProfile = async (showRefreshing = false) => {
+  const loadProfile = async (showRefreshing = false, skipLoadingIndicator = false) => {
     try {
-      if (showRefreshing) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
+      if (!skipLoadingIndicator) {
+        if (showRefreshing) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
+        }
       }
 
       const response = await authAPI.getProfile();
       if (response.success && response.user) {
         setUser(response.user);
 
-        // Extract created events from the response
+        // Extract created events from the response (use backend data as-is; joinedUsers must come from backend)
         if (response.user.createdEvents && Array.isArray(response.user.createdEvents) && response.user.createdEvents.length > 0) {
-          // Check if it's an array of objects (full events) or strings (IDs)
           const firstItem = response.user.createdEvents[0];
           if (typeof firstItem === 'object' && firstItem !== null) {
-            // Full event objects - map them directly
-            const created = response.user.createdEvents.map((event: any) => convertEvent(event));
+            const created = response.user.createdEvents.map((apiEvent: any) => convertEvent(apiEvent));
             setMyEvents(created);
           } else {
-            // Just IDs - load from events API
             await loadMyEvents(false);
           }
         } else {
-          // No created events or empty array - try loading from API
           await loadMyEvents(false);
         }
 
-        // Extract joined events and liked events from the response
+        // Extract joined events from the response (use backend data as-is; joinedUsers must come from backend)
         if (response.user.joinedEvents && Array.isArray(response.user.joinedEvents) && response.user.joinedEvents.length > 0) {
-          // Check if it's an array of objects (full joined events with tickets) or strings (IDs)
           const firstItem = response.user.joinedEvents[0];
           if (typeof firstItem === 'object' && firstItem !== null && firstItem.event) {
-            // Full joined event objects with tickets - store them
-            setJoinedEventsData(response.user.joinedEvents);
-
-            // Also store converted events for display
-            const joined = response.user.joinedEvents.map((item: any) => {
-              if (item.event) {
-                return convertEvent(item.event);
-              }
-              return null;
-            }).filter(Boolean);
+            const rawJoined = response.user.joinedEvents as { event: any; tickets?: any[] }[];
+            setJoinedEventsData(rawJoined);
+            const joined = rawJoined.map((item: any) => (item.event ? convertEvent(item.event) : null)).filter(Boolean);
             setJoinedEvents(joined);
           } else {
-            // Just IDs - clear for now (will be loaded when user navigates to profile)
             setJoinedEventsData([]);
             setJoinedEvents([]);
           }
@@ -321,7 +325,8 @@ export default function ProfileScreen() {
       }
     } catch (error: any) {
       console.error('Failed to load profile:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to load profile');
+      setErrorModalMessage(error.response?.data?.message || 'Failed to load profile');
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -333,6 +338,44 @@ export default function ProfileScreen() {
     loadProfile(true);
   };
 
+  // Load cached profile from local storage and apply to state (show immediately, no wait for API)
+  const loadProfileFromCache = async (): Promise<boolean> => {
+    try {
+      const raw = await AsyncStorage.getItem(PROFILE_CACHE_KEY);
+      if (!raw) return false;
+      const cached = JSON.parse(raw) as { success?: boolean; user?: any };
+      if (!cached?.user) return false;
+      const u = cached.user;
+      // Normalize user: API may return "id", store/UI expect "_id"
+      if (!u._id && u.id) u._id = u.id;
+      setUser(u);
+      // Apply created events from cache
+      if (u.createdEvents && Array.isArray(u.createdEvents) && u.createdEvents.length > 0 && typeof u.createdEvents[0] === 'object') {
+        setMyEvents(u.createdEvents.map((e: any) => convertEvent(e)));
+      } else {
+        setMyEvents([]);
+      }
+      // Apply joined events from cache ({ event, tickets }[])
+      if (u.joinedEvents && Array.isArray(u.joinedEvents) && u.joinedEvents.length > 0 && typeof u.joinedEvents[0] === 'object' && (u.joinedEvents[0] as any).event) {
+        const joinedData = u.joinedEvents as { event: any; tickets?: any[] }[];
+        setJoinedEventsData(joinedData);
+        setJoinedEvents(joinedData.map((item: any) => item.event ? convertEvent(item.event) : null).filter(Boolean));
+      } else {
+        setJoinedEventsData([]);
+        setJoinedEvents([]);
+      }
+      // Apply liked events from cache
+      if (u.likedEvents && Array.isArray(u.likedEvents) && u.likedEvents.length > 0 && typeof u.likedEvents[0] === 'object') {
+        setLikedEvents(u.likedEvents.map((e: any) => convertEvent(e)));
+      } else {
+        setLikedEvents([]);
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  };
+
   const loadMyEvents = async (showLoading = true) => {
     try {
       if (showLoading) {
@@ -340,14 +383,15 @@ export default function ProfileScreen() {
       }
       const response = await eventsAPI.getMyEvents();
       if (response.success && response.events) {
-        const convertedEvents = response.events.map(convertEvent);
-        setMyEvents(convertedEvents);
+        const converted = response.events.map((apiEvent: any) => convertEvent(apiEvent));
+        setMyEvents(converted);
       }
     } catch (error: any) {
       console.error('Failed to load events:', error);
       // Don't show alert if called from loadProfile to avoid double alerts
       if (showLoading) {
-        Alert.alert('Error', error.response?.data?.message || 'Failed to load events');
+        setErrorModalMessage(error.response?.data?.message || 'Failed to load events');
+        setShowErrorModal(true);
       }
     } finally {
       if (showLoading) {
@@ -356,7 +400,17 @@ export default function ProfileScreen() {
     }
   };
 
-  // Show login option if user is not authenticated
+  // Show loading only while we check cache (so we don't flash "Login" when user is actually logged in)
+  if (!user && !hasCheckedCache) {
+    return (
+      <View className="flex-1 bg-[#0F0F0F] pt-[60px] items-center justify-center">
+        <ActivityIndicator size="large" color="#9333EA" />
+        <Text className="text-[#9CA3AF] mt-4">Loading profile...</Text>
+      </View>
+    );
+  }
+
+  // Show login option if user is not authenticated (after we've checked cache)
   if (!user) {
     return (
       <View className="flex-1 bg-[#0F0F0F] pt-[60px]">
@@ -385,26 +439,14 @@ export default function ProfileScreen() {
   // Use myEvents directly as created events (they're already filtered by the API)
   const createdEvents = myEvents;
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     console.log('🔴 Logout button clicked!');
+    setShowLogoutModal(true);
+  };
 
-    // Show confirmation dialog
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-        onPress: () => {
-          console.log('❌ Logout cancelled by user');
-        }
-      },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          await performLogout();
-        },
-      },
-    ]);
+  const confirmLogout = async () => {
+    setShowLogoutModal(false);
+    await performLogout();
   };
 
   const performLogout = async () => {
@@ -506,77 +548,13 @@ export default function ProfileScreen() {
     }
   };
 
-  const renderJoinedEvent = (joinedEventData: any, index: number) => {
-    const event = joinedEventData.event;
-    const tickets = joinedEventData.tickets || [];
-
-    // Handle both id and _id fields
-    const eventId = event?.id || event?._id || (event as any)?._id || (event as any)?.id;
-
-    if (!eventId) {
-      console.warn('⚠️ Joined event missing ID:', event);
-    }
-
-    const formatDate = (dateString: string) => {
-      const date = new Date(dateString);
-      const month = date.toLocaleString('default', { month: 'short' });
-      const day = date.getDate();
-      return { month, day };
-    };
-
-    const { month, day } = formatDate(event.date);
-
-    return (
-      <TouchableOpacity
-        className="bg-[#1F1F1F] rounded-xl overflow-hidden mb-4 w-full "
-        onPress={() => {
-          if (eventId) {
-            console.log('📍 Navigating to joined event details with ID:', eventId);
-            router.push(`/event-details/${eventId}`);
-          } else {
-            console.error('❌ Cannot navigate: event ID is missing');
-          }
-        }}
-        activeOpacity={0.8}
-      >
-
-        <View className="flex-row items-center justify-between">
-          
-        </View>
-        <View className="w-full h-[180px] relative">
-          <Image
-            source={{ uri: getEventImageUrl(event) || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800' }}
-            className="w-full h-full"
-            resizeMode="cover"
-          />
-          <View className="absolute top-2 right-2 bg-[#EF4444] rounded-lg py-1.5 px-2.5 items-center min-w-[50px]">
-            <Text className="text-white text-[10px] font-semibold uppercase">{month}</Text>
-            <Text className="text-white text-base font-bold">{day}</Text>
-          </View>
-          <View className="absolute top-2 left-2 bg-[#9333EA] rounded-lg py-1.5 px-2.5">
-            <Text className="text-white text-xs font-semibold">{tickets.length} Ticket{tickets.length !== 1 ? 's' : ''}</Text>
-          </View>
-        </View>
-        <View className="p-3">
-          <Text className="text-white text-base font-semibold mb-2" numberOfLines={2}>
-            {event.title}
-          </Text>
-          <View className="flex-row items-center">
-            <Text className="text-xs mr-1">📍</Text>
-            <Text className="text-[#9CA3AF] text-xs flex-1" numberOfLines={1}>
-              {event.location?.length > 30 ? `${event.location.substring(0, 30)}...` : event.location}
-            </Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   const renderEvents = () => {
     if (loading) {
       return (
-        <View className="py-10 items-center">
-          <ActivityIndicator size="large" color="#9333EA" />
+        <View className="flex-row flex-wrap justify-between">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <EventCardSkeleton key={i} />
+          ))}
         </View>
       );
     }
@@ -597,12 +575,14 @@ export default function ProfileScreen() {
       return (
         <View className="flex-row flex-wrap justify-between">
           {joinedEventsData.map((joinedEventData, index) => {
-            const event = joinedEventData.event;
-            const eventId = event?.id || event?._id || `event-${index}`;
+            const event = convertEvent(joinedEventData.event);
+            const eventId = event.id || `event-${index}`;
             return (
-              <View key={eventId} className="w-[48%]">
-                {renderJoinedEvent(joinedEventData, index)}
-              </View>
+              <EventCard
+                key={eventId}
+                event={event}
+                onPress={() => eventId && router.push(`/event-details/${eventId}`)}
+              />
             );
           })}
         </View>
@@ -769,6 +749,44 @@ export default function ProfileScreen() {
         {/* Events List */}
         <View className="px-5 mb-8">{renderEvents()}</View>
       </ScrollView>
+
+      <Modal
+        visible={showPermissionModal}
+        onClose={() => setShowPermissionModal(false)}
+        title="Permission Required"
+        message="We need access to your photos to upload profile images."
+        primaryButtonText="OK"
+        onPrimaryPress={() => setShowPermissionModal(false)}
+        variant="info"
+      />
+      <Modal
+        visible={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title="Error"
+        message={errorModalMessage}
+        primaryButtonText="OK"
+        onPrimaryPress={() => setShowErrorModal(false)}
+        variant="error"
+      />
+      <Modal
+        visible={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title="Success"
+        message={successModalMessage}
+        primaryButtonText="OK"
+        onPrimaryPress={() => setShowSuccessModal(false)}
+        variant="success"
+      />
+      <Modal
+        visible={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        title="Logout"
+        message="Are you sure you want to logout?"
+        primaryButtonText="Logout"
+        secondaryButtonText="Cancel"
+        onPrimaryPress={confirmLogout}
+        variant="info"
+      />
     </View>
   );
 }

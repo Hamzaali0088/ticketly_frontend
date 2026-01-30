@@ -3,18 +3,28 @@ import { Platform } from 'react-native';
 import { API_BASE_URL } from '../config';
 import { getAccessToken } from './client';
 
+/** Price: paid { price: number, currency: string } or free { price: 'free', currency: null } */
+export type EventPrice =
+  | { price: number; currency: string }
+  | { price: 'free'; currency: null };
+
 export interface Event {
   _id: string;
   title: string;
-  description: string;
+  description?: string;
   date: string;
   time: string;
-  location: string;
+  location?: string;
   image?: string;
-  email: string;
-  phone: string;
-  ticketPrice: number;
-  totalTickets: number;
+  email?: string;
+  phone?: string;
+  /** @deprecated Prefer price. Kept for backward compatibility. */
+  ticketPrice?: number;
+  totalTickets?: number;
+  /** Paid { price, currency } or free { price: 'free', currency: null } */
+  price?: EventPrice;
+  gender?: 'male' | 'female' | 'all';
+  organizerName?: string;
   status?: 'pending' | 'approved';
   createdBy?: {
     _id: string;
@@ -37,15 +47,24 @@ export interface Event {
 
 export interface CreateEventRequest {
   title: string;
-  description: string;
   date: string;
   time: string;
-  location: string;
+  /** Optional */
+  location?: string;
+  /** Optional */
+  description?: string;
   image?: string;
   email: string;
-  phone: string;
-  ticketPrice: number;
-  totalTickets: number;
+  /** From user; optional for backend compat */
+  organizerName?: string;
+  phone?: string;
+  gender: 'male' | 'female' | 'all';
+  /** Paid { price: number, currency: 'PKR' } or free { price: 'free', currency: null } */
+  price: EventPrice;
+  /** For paid events; optional for free */
+  totalTickets?: number;
+  /** Backward compat: same as price.price when paid, 0 when free */
+  ticketPrice?: number;
 }
 
 export interface UpdateEventRequest {
@@ -59,6 +78,9 @@ export interface UpdateEventRequest {
   phone?: string;
   ticketPrice?: number;
   totalTickets?: number;
+  price?: EventPrice;
+  gender?: 'male' | 'female' | 'all';
+  organizerName?: string;
 }
 
 export interface EventsResponse {

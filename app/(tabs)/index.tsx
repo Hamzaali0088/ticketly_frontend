@@ -1,10 +1,16 @@
 import { EventCard } from '@/components/EventCard';
+import { EventCardSkeleton } from '@/components/EventCardSkeleton';
 import { useAppStore } from '@/store/useAppStore';
 import { eventsAPI } from '@/lib/api/events';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { getEventImageUrl, getProfileImageUrl } from '@/lib/utils/imageUtils';
 import { API_BASE_URL } from '@/lib/config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PROFILE_CACHE_KEY } from '@/lib/api/auth';
+import { useFocusEffect } from 'expo-router';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { Modal } from '@/components/Modal';
 import {
   Dimensions,
   Image,
@@ -13,7 +19,6 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
-  Alert,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Animated,
@@ -21,6 +26,111 @@ import {
   Platform,
   RefreshControl,
 } from 'react-native';
+
+export type HomeFilter =
+  | 'all'
+  | 'myevents'
+  | 'today'
+  | 'tomorrow'
+  | 'thisweek'
+  | 'thisweekend'
+  | 'nextweek'
+  | 'nextweekend'
+  | 'thismonth';
+
+const FILTER_OPTIONS: { key: HomeFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'myevents', label: 'My Events' },
+  { key: 'today', label: 'Today' },
+  { key: 'tomorrow', label: 'Tomorrow' },
+  { key: 'thisweek', label: 'This Week' },
+  { key: 'thisweekend', label: 'This Weekend' },
+  { key: 'nextweek', label: 'Next Week' },
+  { key: 'nextweekend', label: 'Next Weekend' },
+  { key: 'thismonth', label: 'This Month' },
+];
+
+function getStartOfWeek(d: Date): Date {
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.getFullYear(), d.getMonth(), diff);
+}
+
+function getEndOfWeek(d: Date): Date {
+  const start = getStartOfWeek(d);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return end;
+}
+
+function getStartOfNextWeek(d: Date): Date {
+  const start = getStartOfWeek(d);
+  const next = new Date(start);
+  next.setDate(next.getDate() + 7);
+  return next;
+}
+
+function getEndOfNextWeek(d: Date): Date {
+  const start = getStartOfNextWeek(d);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return end;
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function isWeekend(d: Date): boolean {
+  const day = d.getDay();
+  return day === 0 || day === 6;
+}
+
+function eventMatchesFilter(event: { date: string; organizerId?: string }, filter: HomeFilter, userId?: string): boolean {
+  const parts = event.date.split('-').map(Number);
+  const eventDate = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+  eventDate.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (filter === 'all') return true;
+  if (filter === 'myevents') {
+    if (!userId) return false;
+    return event.organizerId === userId;
+  }
+  if (filter === 'today') return isSameDay(eventDate, today);
+  if (filter === 'tomorrow') {
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return isSameDay(eventDate, tomorrow);
+  }
+  if (filter === 'thisweek') {
+    const start = getStartOfWeek(today);
+    const end = getEndOfWeek(today);
+    return eventDate >= start && eventDate <= end;
+  }
+  if (filter === 'thisweekend') {
+    const start = getStartOfWeek(today);
+    const end = getEndOfWeek(today);
+    if (eventDate < start || eventDate > end) return false;
+    return isWeekend(eventDate);
+  }
+  if (filter === 'nextweek') {
+    const start = getStartOfNextWeek(today);
+    const end = getEndOfNextWeek(today);
+    return eventDate >= start && eventDate <= end;
+  }
+  if (filter === 'nextweekend') {
+    const start = getStartOfNextWeek(today);
+    const end = getEndOfNextWeek(today);
+    if (eventDate < start || eventDate > end) return false;
+    return isWeekend(eventDate);
+  }
+  if (filter === 'thismonth') {
+    return eventDate.getMonth() === today.getMonth() && eventDate.getFullYear() === today.getFullYear();
+  }
+  return true;
+}
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Event } from '@/lib/api/events';
 
@@ -52,46 +162,122 @@ const normalizeProfileUrl = (url?: string | null): string | undefined => {
   return url;
 };
 
+// Derive numeric price for cards: event.price { price, currency } or ticketPrice
+function getEventPrice(apiEvent: Event): number {
+  if (apiEvent.price?.price === 'free' || apiEvent.price?.currency === null) return 0;
+  if (typeof apiEvent.price?.price === 'number') return apiEvent.price.price;
+  return apiEvent.ticketPrice ?? 0;
+}
+
 // Helper function to convert API event to app event format
-const convertEvent = (apiEvent: Event) => ({
-  id: apiEvent._id,
-  title: apiEvent.title,
-  description: apiEvent.description,
-  date: apiEvent.date,
-  time: apiEvent.time,
-  venue: apiEvent.location,
-  city: apiEvent.location.split(',')[0] || apiEvent.location,
-  category: 'Event',
-  image: getEventImageUrl(apiEvent) || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
-  organizerId: apiEvent.createdBy?._id || '',
-  organizerName: apiEvent.createdBy?.fullName || 'Organizer',
-  price: apiEvent.ticketPrice,
-  accessType: apiEvent.ticketPrice > 0 ? 'paid' as const : 'open' as const,
-  registeredUsers: [],
-  likedUsers: [],
-  hostAvatarUrl: apiEvent.createdBy ? getProfileImageUrl(apiEvent.createdBy as any) : null,
-  joinedUsers: (apiEvent.joinedUsers || []).map((user) => ({
-    id: user._id,
-    name: user.name,
-    avatarUrl: normalizeProfileUrl(user.profileImageUrl || undefined),
-  })),
-  joinedCount: apiEvent.joinedCount ?? (apiEvent.joinedUsers?.length ?? 0),
-});
+const convertEvent = (apiEvent: Event) => {
+  const location = apiEvent.location ?? '';
+  const price = getEventPrice(apiEvent);
+  return {
+    id: apiEvent._id,
+    title: apiEvent.title,
+    description: apiEvent.description ?? '',
+    date: apiEvent.date,
+    time: apiEvent.time,
+    venue: location,
+    city: location.split(',')[0] || location,
+    category: 'Event',
+    image: getEventImageUrl(apiEvent) || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
+    organizerId: apiEvent.createdBy?._id || '',
+    organizerName: apiEvent.createdBy?.fullName || apiEvent.organizerName || 'Organizer',
+    price,
+    accessType: price > 0 ? ('paid' as const) : ('open' as const),
+    registeredUsers: [],
+    likedUsers: [],
+    hostAvatarUrl: apiEvent.createdBy ? getProfileImageUrl(apiEvent.createdBy as any) : null,
+    joinedUsers: (apiEvent.joinedUsers || []).map((user) => ({
+      id: user._id,
+      name: user.name,
+      avatarUrl: normalizeProfileUrl(user.profileImageUrl || undefined),
+    })),
+    joinedCount: apiEvent.joinedCount ?? (apiEvent.joinedUsers?.length ?? 0),
+  };
+};
+
+// Convert cached/API event (id or _id, date with T) to card format for "My Events" from profile cache
+const convertCachedEvent = (apiEvent: any) => {
+  const eventId = apiEvent._id || apiEvent.id || '';
+  const dateStr = apiEvent.date
+    ? (String(apiEvent.date).includes('T') ? String(apiEvent.date).split('T')[0] : apiEvent.date)
+    : '';
+  const location = apiEvent.location ?? '';
+  const price =
+    apiEvent.price?.price === 'free' || apiEvent.price?.currency === null
+      ? 0
+      : typeof apiEvent.price?.price === 'number'
+        ? apiEvent.price.price
+        : apiEvent.ticketPrice ?? 0;
+  return {
+    id: eventId,
+    title: apiEvent.title || '',
+    description: apiEvent.description || '',
+    date: dateStr,
+    time: apiEvent.time || '',
+    venue: location,
+    city: location.split(',')[0] || location,
+    category: 'Event',
+    image: getEventImageUrl(apiEvent) || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
+    organizerId: apiEvent.createdBy?._id || apiEvent.createdBy?.id || '',
+    organizerName: apiEvent.createdBy?.fullName || apiEvent.organizerName || 'Organizer',
+    price,
+    accessType: price > 0 ? ('paid' as const) : ('open' as const),
+    registeredUsers: [],
+    likedUsers: [],
+    hostAvatarUrl: apiEvent.createdBy ? getProfileImageUrl(apiEvent.createdBy as any) : null,
+    joinedUsers: (apiEvent.joinedUsers || []).map((u: any) => ({
+      id: u._id || u.id,
+      name: u.name || u.fullName,
+      avatarUrl: normalizeProfileUrl(u.profileImageUrl || u.avatarUrl),
+    })),
+    joinedCount: apiEvent.joinedCount ?? (apiEvent.joinedUsers?.length ?? 0),
+  };
+};
 
 export default function HomeScreen() {
   const router = useRouter();
   const user = useAppStore((state) => state.user);
-  const isAuthenticated = useAppStore((state) => state.isAuthenticated);
+  const setUser = useAppStore((state) => state.setUser);
   const setEvents = useAppStore((state) => state.setEvents);
   const insets = useSafeAreaInsets();
   const [featuredEvents, setFeaturedEvents] = useState<any[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<HomeFilter>('all');
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
   const animatedScales = useRef<Animated.Value[]>([]);
+  const lastScrollY = useRef(0);
+  const headerTranslateY = useRef(new Animated.Value(0)).current;
+
+  // Hydrate user from profile cache when home tab is focused so "My Events" can show createdEvents from localStorage
+  useFocusEffect(
+    React.useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const raw = await AsyncStorage.getItem(PROFILE_CACHE_KEY);
+          if (cancelled || !raw) return;
+          const cached = JSON.parse(raw) as { success?: boolean; user?: any };
+          if (!cached?.user) return;
+          const u = cached.user;
+          if (!u._id && u.id) u._id = u.id;
+          if (!cancelled) setUser(u);
+        } catch (_) {
+          // Ignore cache parse errors
+        }
+      })();
+      return () => { cancelled = true; };
+    }, [setUser])
+  );
 
   // Calculate bottom padding: tab bar height + safe area bottom + extra padding
   // Tab bar layout: iOS height=90 (includes paddingBottom=30), Android height=75 + paddingBottom + marginBottom=10
@@ -129,7 +315,8 @@ export default function HomeScreen() {
         }
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to load events');
+      setErrorModalMessage(error.response?.data?.message || 'Failed to load events');
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -140,20 +327,108 @@ export default function HomeScreen() {
     loadEvents(true);
   };
 
-  if (loading) {
-    return (
-      <View className="flex-1 bg-[#0F0F0F] justify-center items-center">
-        <ActivityIndicator size="large" color="#9333EA" />
-      </View>
+  const filteredEvents = useMemo(() => {
+    // "My Events" tab: show createdEvents from profile cache (localStorage) when available
+    if (activeFilter === 'myevents' && user?.createdEvents && Array.isArray(user.createdEvents) && user.createdEvents.length > 0) {
+      const first = user.createdEvents[0];
+      if (typeof first === 'object' && first !== null && (first.id || first._id)) {
+        return user.createdEvents.map((e: any) => convertCachedEvent(e));
+      }
+    }
+    return upcomingEvents.filter((event) =>
+      eventMatchesFilter(event, activeFilter, user?._id)
     );
-  }
+  }, [upcomingEvents, activeFilter, user?._id, user?.createdEvents]);
+
+  const safeTop = 60 + insets.top;
+  const headerRowHeight = 52;
+  const filterRowHeight = 44;
+  const headerHeight = safeTop + headerRowHeight + filterRowHeight;
+
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = e.nativeEvent.contentOffset.y;
+    const diff = y - lastScrollY.current;
+    if (y <= 30) {
+      Animated.timing(headerTranslateY, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+    } else if (diff > 15) {
+      Animated.timing(headerTranslateY, { toValue: -headerHeight, duration: 200, useNativeDriver: true }).start();
+    } else if (diff < -15) {
+      Animated.timing(headerTranslateY, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+    }
+    lastScrollY.current = y;
+  };
 
   return (
     <View className="flex-1 bg-[#0F0F0F]">
+      {/* Header: hides when scrolling down, shows when scrolling up */}
+      <Animated.View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+          transform: [{ translateY: headerTranslateY }],
+        }}
+      >
+        <View
+          className="bg-[#0F0F0F] border-b border-[#1F1F1F]"
+          style={{ paddingTop: safeTop }}
+          pointerEvents="box-none"
+        >
+          <View className="px-5 pb-3 flex-row items-center justify-between" pointerEvents="box-none">
+            <View className="w-10" />
+            <Text className="text-2xl font-bold text-white">ticketly</Text>
+            <TouchableOpacity
+              className="w-10 h-10 items-center justify-center"
+              onPress={() => router.push('/(tabs)/explore')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <MaterialIcons name="search" size={26} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+          {/* Filter chips: sticky with header on scroll up */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 12 }}
+            className="flex-row"
+          >
+            {FILTER_OPTIONS.map(({ key, label }) => {
+              const isActive = activeFilter === key;
+              return (
+                <TouchableOpacity
+                  key={key}
+                  onPress={() => setActiveFilter(key)}
+                  className="rounded-full px-4 py-2 mr-2"
+                  style={{
+                    backgroundColor: '#1F1F1F',
+                    borderWidth: isActive ? 2 : 0,
+                    borderColor: isActive ? '#9333EA' : 'transparent',
+                  }}
+                >
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: isActive ? '#FFFFFF' : '#9CA3AF' }}
+                  >
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </Animated.View>
+
+      {/* Content: paddingTop so list starts below header; header hides on scroll down, shows on scroll up */}
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: bottomPadding }}
+        contentContainerStyle={{ paddingTop: headerHeight, paddingBottom: bottomPadding }}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        overScrollMode="always"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -163,215 +438,55 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Header */}
-        <View className="pt-[60px] px-5 pb-5">
-          <Text className="text-3xl font-bold text-white mb-4">ticketly</Text>
-          <TouchableOpacity
-            className="bg-[#1F1F1F] rounded-xl py-3 px-4"
-            onPress={() => router.push('/(tabs)/explore')}
-          >
-            <Text className="text-[#6B7280] text-sm">Search by event</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Featured Event Carousel */}
-        {featuredEvents.length > 0 && (
-          <View className="mb-6">
-            <ScrollView
-              ref={scrollViewRef}
-              horizontal
-              pagingEnabled={false}
-              showsHorizontalScrollIndicator={false}
-              onMomentumScrollEnd={(event: NativeSyntheticEvent<NativeScrollEvent>) => {
-                const slideIndex = Math.round(
-                  event.nativeEvent.contentOffset.x / (CARD_WIDTH + CARD_SPACING)
-                );
-                const clampedIndex = Math.min(Math.max(0, slideIndex), featuredEvents.length - 1);
-                if (clampedIndex !== currentSlide) {
-                  // Animate all cards smoothly over 1 second with easing
-                  animatedScales.current.forEach((scale, index) => {
-                    Animated.timing(scale, {
-                      toValue: index === clampedIndex ? 1 : 0.92,
-                      duration: 1000,
-                      easing: Easing.out(Easing.cubic),
-                      useNativeDriver: true,
-                    }).start();
-                  });
-                  setCurrentSlide(clampedIndex);
-                }
-              }}
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-                {
-                  useNativeDriver: false,
-                  listener: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-                    const slideIndex = Math.round(
-                      event.nativeEvent.contentOffset.x / (CARD_WIDTH + CARD_SPACING)
-                    );
-                    const clampedIndex = Math.min(Math.max(0, slideIndex), featuredEvents.length - 1);
-                    if (clampedIndex !== currentSlide && animatedScales.current.length > 0) {
-                      // Animate all cards smoothly over 1 second
-                      animatedScales.current.forEach((scale, index) => {
-                        Animated.timing(scale, {
-                          toValue: index === clampedIndex ? 1 : 0.92,
-                          duration: 1000,
-                          useNativeDriver: true,
-                        }).start();
-                      });
-                      setCurrentSlide(clampedIndex);
-                    }
-                  },
-                }
-              )}
-              scrollEventThrottle={16}
-              className="mb-3"
-              snapToInterval={CARD_WIDTH + CARD_SPACING}
-              decelerationRate={0.92}
-              bounces={false}
-              contentContainerStyle={{
-                paddingHorizontal: HORIZONTAL_PADDING,
-              }}
-            >
-              {featuredEvents.map((event, index) => {
-                const scrollPosition = index * (CARD_WIDTH + CARD_SPACING);
-                const inputRange = [
-                  scrollPosition - (CARD_WIDTH + CARD_SPACING),
-                  scrollPosition - (CARD_WIDTH + CARD_SPACING) * 0.5,
-                  scrollPosition,
-                  scrollPosition + (CARD_WIDTH + CARD_SPACING) * 0.5,
-                  scrollPosition + (CARD_WIDTH + CARD_SPACING),
-                ];
-
-                // Smooth opacity interpolation for real-time feedback
-                const opacity = scrollX.interpolate({
-                  inputRange,
-                  outputRange: [0.7, 0.8, 1, 0.8, 0.7],
-                  extrapolate: 'clamp',
-                });
-
-                // Use animated scale value for smooth 1-second transitions
-                const animatedScale = animatedScales.current[index] || new Animated.Value(0.92);
-
-                return (
-                  <Animated.View
-                    key={event.id}
-                    style={{
-                      width: CARD_WIDTH,
-                      height: 300,
-                      marginRight: CARD_SPACING,
-                      borderRadius: 20,
-                      overflow: 'hidden',
-                      transform: [{ scale: animatedScale }],
-                      opacity,
-                    }}
-                  >
-                    <TouchableOpacity
-                      onPress={() => router.push(`/event-details/${event.id}`)}
-                      activeOpacity={0.9}
-                      style={{ width: '100%', height: '100%' }}
-                    >
-                      <Image
-                        source={{ uri: getEventImageUrl(event) || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800' }}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                        }}
-                        resizeMode="cover"
-                      />
-                      <View
-                        style={{
-                          position: 'absolute',
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                          padding: 20,
-                          borderBottomLeftRadius: 20,
-                          borderBottomRightRadius: 20,
-                        }}
-                      >
-                        <View style={{ gap: 8 }}>
-                          <Text
-                            className="text-white text-2xl font-bold"
-                            numberOfLines={2}
-                            style={{ textShadowColor: 'rgba(0, 0, 0, 0.75)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 }}
-                          >
-                            {event.title}
-                          </Text>
-                          <Text
-                            className="text-[#D1D5DB] text-sm"
-                            style={{ textShadowColor: 'rgba(0, 0, 0, 0.75)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}
-                          >
-                            {event.venue}
-                          </Text>
-                          <Text
-                            className="text-[#9333EA] text-sm font-semibold"
-                            style={{ textShadowColor: 'rgba(0, 0, 0, 0.75)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}
-                          >
-                            {new Date(event.date).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                    {/* Subtle shadow for depth */}
-                    <View
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        borderRadius: 20,
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 8,
-                        elevation: 8,
-                      }}
-                      pointerEvents="none"
-                    />
-                  </Animated.View>
-                );
-              })}
-            </ScrollView>
-            {/* Pagination Dots */}
-            <View className="flex-row justify-center gap-2 mt-4">
-              {featuredEvents.map((_, index) => (
-                <View
-                  key={index}
-                  style={{
-                    width: index === currentSlide ? 24 : 8,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: index === currentSlide ? '#FFFFFF' : '#374151',
-                  }}
-                />
+        {/* Upcoming Events */}
+        <View className="px-5 pt-5">
+          <Text className="text-white text-xl font-bold mb-4">Upcoming Events</Text>
+          {loading ? (
+            <View className="flex-row flex-wrap justify-between">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <EventCardSkeleton key={i} />
               ))}
             </View>
-          </View>
-        )}
-
-
-
-        {/* Upcoming Events */}
-        <View className="px-5">
-          <Text className="text-white text-xl font-bold mb-4">Upcoming Events</Text>
-          {upcomingEvents.length === 0 ? (
-            <View className="py-10 items-center">
-              <Text className="text-[#6B7280] text-sm">No events available</Text>
+          ) : filteredEvents.length === 0 ? (
+            <View className="py-14 items-center justify-center">
+              <MaterialIcons name="event-busy" size={48} color="#4B5563" />
+              <Text className="text-[#9CA3AF] text-base font-medium mt-3">No data found</Text>
+              <Text className="text-[#6B7280] text-sm mt-1 text-center px-6">
+                {activeFilter === 'myevents'
+                  ? "You haven't created any events yet."
+                  : upcomingEvents.length === 0
+                    ? 'No events available yet.'
+                    : 'No events match this filter.'}
+              </Text>
+              {activeFilter === 'myevents' && (
+                <TouchableOpacity
+                  className="bg-[#9333EA] py-4 px-8 rounded-xl mt-6"
+                  onPress={() => router.push('/create-event')}
+                  activeOpacity={0.8}
+                >
+                  <Text className="text-white text-base font-semibold">Create event</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             <View className="flex-row flex-wrap justify-between">
-              {upcomingEvents.map((event) => (
+              {filteredEvents.map((event) => (
                 <EventCard key={event.id} event={event} />
               ))}
             </View>
           )}
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title="Error"
+        message={errorModalMessage}
+        primaryButtonText="OK"
+        onPrimaryPress={() => setShowErrorModal(false)}
+        variant="error"
+      />
     </View>
   );
 }

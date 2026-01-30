@@ -1,7 +1,10 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from './client';
 import { setTokens, clearTokens, getAccessToken } from './client';
 import { Platform } from 'react-native';
 import { API_BASE_URL } from '../config';
+
+export const PROFILE_CACHE_KEY = 'auth_profile';
 
 export interface SignupRequest {
   name: string;
@@ -124,6 +127,19 @@ export interface UserProfile {
   updatedAt?: string;
 }
 
+/** Public user profile by ID (no auth required) - name, profile image, created/joined/liked events */
+export interface PublicUserProfile {
+  _id: string;
+  id?: string;
+  fullName: string;
+  profileImage?: string | null;
+  profileImageUrl?: string | null;
+  companyName?: string | null;
+  createdEvents?: any[];
+  joinedEvents?: { event: any; tickets?: any[] }[];
+  likedEvents?: any[];
+}
+
 // Auth API functions
 export const authAPI = {
   // Signup
@@ -182,10 +198,32 @@ export const authAPI = {
     return result;
   },
 
-  // Get User Profile
+  // Get User Profile (saves response to local storage for offline/cached display)
   getProfile: async (): Promise<{ success: boolean; user: UserProfile }> => {
     const response = await apiClient.get('/auth/profile');
+    const data = response.data;
+    if (data.success && data.user) {
+      try {
+        await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(data));
+      } catch (e) {
+        console.warn('Failed to cache profile:', e);
+      }
+    }
+    return data;
+  },
+
+  /** Get public user profile by ID (no auth required) - name, profile image, created/joined/liked events */
+  getUserProfileById: async (userId: string): Promise<{ success: boolean; user: PublicUserProfile }> => {
+    const response = await apiClient.get(`/users/${userId}/profile`);
     return response.data;
+  },
+
+  clearProfileCache: async (): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem(PROFILE_CACHE_KEY);
+    } catch (e) {
+      console.warn('Failed to clear profile cache:', e);
+    }
   },
 
   // Update User (Self Update)
