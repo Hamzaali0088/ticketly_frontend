@@ -359,7 +359,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <View className="flex-1 bg-[#0F0F0F]">
+    <View className="flex-1 bg-white">
       {/* Header: hides when scrolling down, shows when scrolling up */}
       <Animated.View
         pointerEvents="box-none"
@@ -373,19 +373,19 @@ export default function HomeScreen() {
         }}
       >
         <View
-          className="bg-[#0F0F0F] border-b border-[#1F1F1F]"
+          className="bg-white border-b border-gray-200"
           style={{ paddingTop: safeTop }}
           pointerEvents="box-none"
         >
           <View className="px-5 pb-3 flex-row items-center justify-between" pointerEvents="box-none">
             <View className="w-10" />
-            <Text className="text-2xl font-bold text-white">ticketly</Text>
+            <Text className="text-2xl font-bold text-gray-900">ticketly</Text>
             <TouchableOpacity
               className="w-10 h-10 items-center justify-center"
               onPress={() => router.push('/(tabs)/explore')}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <MaterialIcons name="search" size={26} color="#FFFFFF" />
+              <MaterialIcons name="search" size={26} color="#111827" />
             </TouchableOpacity>
           </View>
           {/* Filter chips: sticky with header on scroll up */}
@@ -403,14 +403,14 @@ export default function HomeScreen() {
                   onPress={() => setActiveFilter(key)}
                   className="rounded-full px-4 py-2 mr-2"
                   style={{
-                    backgroundColor: '#1F1F1F',
+                    backgroundColor: isActive ? '#FEF2F2' : '#F3F4F6',
                     borderWidth: isActive ? 2 : 0,
-                    borderColor: isActive ? '#9333EA' : 'transparent',
+                    borderColor: isActive ? '#DC2626' : 'transparent',
                   }}
                 >
                   <Text
                     className="text-sm font-semibold"
-                    style={{ color: isActive ? '#FFFFFF' : '#9CA3AF' }}
+                    style={{ color: isActive ? '#DC2626' : '#6B7280' }}
                   >
                     {label}
                   </Text>
@@ -433,14 +433,14 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#9333EA"
-            colors={["#9333EA"]}
+            tintColor="#DC2626"
+            colors={["#DC2626"]}
           />
         }
       >
         {/* Upcoming Events */}
         <View className="px-5 pt-5">
-          <Text className="text-white text-xl font-bold mb-4">Upcoming Events</Text>
+          <Text className="text-gray-900 text-xl font-bold mb-4">Upcoming Events</Text>
           {loading ? (
             <View className="flex-row flex-wrap justify-between">
               {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -460,7 +460,7 @@ export default function HomeScreen() {
               </Text>
               {activeFilter === 'myevents' && (
                 <TouchableOpacity
-                  className="bg-[#9333EA] py-4 px-8 rounded-xl mt-6"
+                  className="bg-primary py-4 px-8 rounded-xl mt-6"
                   onPress={() => router.push('/create-event')}
                   activeOpacity={0.8}
                 >

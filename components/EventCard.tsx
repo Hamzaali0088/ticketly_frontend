@@ -58,7 +58,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
 
   return (
     <TouchableOpacity
-      className="bg-[#1F1F1F] rounded-xl overflow-hidden mb-4 w-[48%]"
+      className="bg-[#1F1F1F] rounded-md overflow-hidden mb-2 w-[49%]"
       onPress={handlePress}
       activeOpacity={0.8}
     >
@@ -152,30 +152,45 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
           </Text>
         </View> */}
 
-        {/* Host row (text + avatar). Joined users are shown on the image pill above */}
+        {/* Host row (text + avatar). Clickable to open host profile. */}
         {hostAvatarUrl && (
-          <View className="flex-row items-center justify-between">
-            {/* Host */}
-            <View className="flex-row items-center gap-2">
-              {hostAvatarUrl && (
+          (() => {
+            const ev = event as any;
+            const organizerId = ev.organizerId || ev.createdBy?._id || ev.createdBy?.id || '';
+            const HostContent = () => (
+              <View className="flex-row items-center gap-2">
                 <Image
                   source={{
-                    uri:
-                      hostAvatarUrl ||
-                      'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
+                    uri: hostAvatarUrl || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
                   }}
                   className="w-7 h-7 rounded-full border border-[#111827] bg-black/80"
                   resizeMode="cover"
                 />
-              )}
-              <View>
-                <Text className="text-white text-[10px] font-semibold max-w-[100px]" numberOfLines={1}>
-                  {event.organizerName || 'Host'}
-                </Text>
-                <Text className="text-[#9CA3AF] text-[9px]">(Host)</Text>
+                <View>
+                  <Text className="text-white text-[10px] font-semibold max-w-[100px]" numberOfLines={1}>
+                    {event.organizerName || 'Host'}
+                  </Text>
+                  <Text className="text-[#9CA3AF] text-[9px]">(Host)</Text>
+                </View>
               </View>
-            </View>
-          </View>
+            );
+            return organizerId ? (
+              <TouchableOpacity
+                className="flex-row items-center justify-between"
+                onPress={(e) => {
+                  (e as any)?.stopPropagation?.();
+                  router.push(`/user/${organizerId}`);
+                }}
+                activeOpacity={0.8}
+              >
+                <HostContent />
+              </TouchableOpacity>
+            ) : (
+              <View className="flex-row items-center justify-between">
+                <HostContent />
+              </View>
+            );
+          })()
         )}
       </View>
 
@@ -210,9 +225,18 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
                 <Text className="text-[#9CA3AF] text-sm py-4">No attendee list available</Text>
               ) : null}
               {joinedUsers.map((user: JoinedUser, index: number) => (
-                <View
+                <TouchableOpacity
                   key={user.id || user._id || `user-${index}`}
                   className="flex-row items-center py-3 border-b border-[#374151]/50"
+                  onPress={() => {
+                    const uid = user.id || user._id;
+                    if (uid) {
+                      setJoinedUsersDropUpVisible(false);
+                      router.push(`/user/${uid}`);
+                    }
+                  }}
+                  activeOpacity={user.id || user._id ? 0.7 : 1}
+                  disabled={!user.id && !user._id}
                 >
                   <Image
                     source={{
@@ -227,7 +251,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
                   <Text className="text-white text-base font-medium ml-3 flex-1" numberOfLines={1}>
                     {user.name || user.fullName || 'User'}
                   </Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </ScrollView>
           </Pressable>

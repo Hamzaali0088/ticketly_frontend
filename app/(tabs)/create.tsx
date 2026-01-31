@@ -15,26 +15,26 @@ export default function CreateTabScreen() {
 
     return (
         <ScrollView
-            className="flex-1 bg-[#0F0F0F] pt-[60px]"
+            className="flex-1 bg-white pt-[60px]"
             contentContainerStyle={{ flexGrow: 1 }}
             showsVerticalScrollIndicator={false}
             refreshControl={
                 <RefreshControl
                     refreshing={refreshing}
                     onRefresh={onRefresh}
-                    tintColor="#9333EA"
-                    colors={["#9333EA"]}
+                    tintColor="#DC2626"
+                    colors={["#DC2626"]}
                 />
             }
         >
             <View className="flex-1 min-h-[400px] items-center justify-center px-10">
-                <MaterialIcons name="add-circle-outline" size={64} color="#9333EA" />
-                <Text className="text-3xl font-bold text-white mb-3 text-center">Create Event</Text>
-                <Text className="text-base text-[#9CA3AF] text-center mb-8">
+                <MaterialIcons name="add-circle-outline" size={64} color="#DC2626" />
+                <Text className="text-3xl font-bold text-gray-900 mb-3 text-center">Create Event</Text>
+                <Text className="text-base text-gray-600 text-center mb-8">
                     Start creating amazing events and reach your audience
                 </Text>
                 <TouchableOpacity
-                    className="bg-[#9333EA] py-4 px-8 rounded-xl"
+                    className="bg-primary py-4 px-8 rounded-xl"
                     onPress={() => router.push('/create-event')}
                 >
                     <Text className="text-white text-base font-semibold">Get Started</Text>

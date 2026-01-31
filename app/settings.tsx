@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -26,10 +26,14 @@ export default function SettingsScreen() {
   const user = useAppStore((state) => state.user);
   const setUser = useAppStore((state) => state.setUser);
   const logout = useAppStore((state) => state.logout);
-  const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
+  const [expandedSection, setExpandedSection] = useState<'profile' | 'security' | 'liked' | null>('profile');
   
   // Edit Profile state
   const [name, setName] = useState(user?.fullName || '');
+  const [likedEventsVisibility, setLikedEventsVisibility] = useState<'public' | 'private'>(
+    (user as any)?.likedEventsVisibility || 'public'
+  );
+  const [loadingLikedVisibility, setLoadingLikedVisibility] = useState(false);
   const [loadingName, setLoadingName] = useState(false);
   
   // Security state
@@ -51,6 +55,11 @@ export default function SettingsScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  useEffect(() => {
+    const vis = (user as any)?.likedEventsVisibility;
+    if (vis === 'public' || vis === 'private') setLikedEventsVisibility(vis);
+  }, [user]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -59,6 +68,7 @@ export default function SettingsScreen() {
         setUser(response.user);
         setName(response.user.fullName || '');
         setEmail(response.user.email || '');
+        setLikedEventsVisibility((response.user as any)?.likedEventsVisibility || 'public');
       }
     } catch (_) {
       // Ignore refresh errors
@@ -218,7 +228,7 @@ export default function SettingsScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-[#0F0F0F]"
+      className="flex-1 bg-white"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
@@ -229,83 +239,91 @@ export default function SettingsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#9333EA"
-            colors={["#9333EA"]}
+            tintColor="#DC2626"
+            colors={["#DC2626"]}
           />
         }
       >
         {/* Header */}
-        <View className="flex-row items-center justify-between pt-[60px] px-5 pb-5">
-          <TouchableOpacity onPress={() => router.back()}>
-            <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
+        <View className="flex-row items-center pt-[60px] px-4 pb-4 border-b border-gray-200">
+          <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2" activeOpacity={0.7}>
+            <MaterialIcons name="arrow-back" size={24} color="#111827" />
           </TouchableOpacity>
-          <Text className="text-white text-xl font-bold">Settings</Text>
-          <View style={{ width: 24 }} />
+          <Text className="flex-1 text-gray-900 text-lg font-semibold text-center mr-8">Settings</Text>
         </View>
 
-        {/* Tabs */}
-        <View className="flex-row px-5 mb-6 gap-2">
+        {/* List */}
+        <View className="px-4 pt-4">
+          {/* Edit Profile */}
           <TouchableOpacity
-            className={`flex-1 py-3 items-center rounded-lg ${activeTab === 'profile' ? 'bg-[#9333EA]' : 'bg-[#1F1F1F]'}`}
-            onPress={() => setActiveTab('profile')}
+            className="flex-row items-center justify-between py-4 border-b border-gray-200"
+            onPress={() => setExpandedSection(expandedSection === 'profile' ? null : 'profile')}
+            activeOpacity={0.7}
           >
-            <Text className={`text-sm font-semibold ${activeTab === 'profile' ? 'text-white' : 'text-[#9CA3AF]'}`}>
-              Edit Profile
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className={`flex-1 py-3 items-center rounded-lg ${activeTab === 'security' ? 'bg-[#9333EA]' : 'bg-[#1F1F1F]'}`}
-            onPress={() => setActiveTab('security')}
-          >
-            <Text className={`text-sm font-semibold ${activeTab === 'security' ? 'text-white' : 'text-[#9CA3AF]'}`}>
-              Security
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Edit Profile Tab */}
-        {activeTab === 'profile' && (
-          <View className="px-5">
-            <Text className="text-white text-lg font-bold mb-5">Update Your Name</Text>
-            <Text className="text-white text-sm font-semibold mb-2">Full Name</Text>
-            <TextInput
-              className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 text-white text-base mb-5 ${nameError ? 'border-[#EF4444]' : 'border-[#374151]'}`}
-              placeholder="Enter your full name"
-              placeholderTextColor="#6B7280"
-              value={name}
-              onChangeText={(text) => {
-                setName(text);
-                if (nameError) setNameError('');
-              }}
-              autoCapitalize="words"
+            <View className="flex-row items-center">
+              <MaterialIcons name="person-outline" size={22} color="#111827" style={{ marginRight: 12 }} />
+              <Text className="text-gray-900 text-base font-medium">Edit Profile</Text>
+            </View>
+            <MaterialIcons
+              name={expandedSection === 'profile' ? 'expand-less' : 'expand-more'}
+              size={24}
+              color="#6B7280"
             />
-            {nameError && (
-              <Text className="text-[#EF4444] text-xs mt-[-20px] mb-3 px-1">{nameError}</Text>
-            )}
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              className={`bg-[#9333EA] py-4 rounded-xl items-center mb-6 ${loadingName ? 'opacity-60' : ''}`}
-              onPress={handleUpdateName}
-              disabled={loadingName}
-            >
-              {loadingName ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text className="text-white text-base font-semibold">Update Name</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
+          {expandedSection === 'profile' && (
+            <View className="pb-6 pt-2">
+              <Text className="text-gray-500 text-xs font-medium mb-3 uppercase tracking-wide">Name</Text>
+              <TextInput
+                className={`bg-gray-50 border rounded-lg py-3 px-4 text-gray-900 text-base mb-2 ${nameError ? 'border-red-500' : 'border-gray-200'}`}
+                placeholder="Full name"
+                placeholderTextColor="#9CA3AF"
+                value={name}
+                onChangeText={(text) => {
+                  setName(text);
+                  if (nameError) setNameError('');
+                }}
+                autoCapitalize="words"
+              />
+              {nameError ? <Text className="text-red-500 text-xs mb-4">{nameError}</Text> : null}
+              <TouchableOpacity
+                className={`bg-gray-900 py-3 rounded-lg items-center ${loadingName ? 'opacity-60' : ''}`}
+                onPress={handleUpdateName}
+                disabled={loadingName}
+              >
+                {loadingName ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text className="text-white text-sm font-semibold">Update Name</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
 
-        {/* Security Tab */}
-        {activeTab === 'security' && (
-          <View className="px-5">
-            <Text className="text-white text-lg font-bold mb-5">Change Email</Text>
-            <Text className="text-white text-sm font-semibold mb-2">Email</Text>
+          {/* Security */}
+          <TouchableOpacity
+            className="flex-row items-center justify-between py-4 border-b border-gray-200"
+            onPress={() => setExpandedSection(expandedSection === 'security' ? null : 'security')}
+            activeOpacity={0.7}
+          >
+            <View className="flex-row items-center">
+              <MaterialIcons name="lock-outline" size={22} color="#111827" style={{ marginRight: 12 }} />
+              <Text className="text-gray-900 text-base font-medium">Security</Text>
+            </View>
+            <MaterialIcons
+              name={expandedSection === 'security' ? 'expand-less' : 'expand-more'}
+              size={24}
+              color="#6B7280"
+            />
+          </TouchableOpacity>
+
+          {expandedSection === 'security' && (
+            <View className="pb-6 pt-2">
+              <Text className="text-gray-500 text-xs font-medium mb-3 uppercase tracking-wide">Email</Text>
             <TextInput
-              className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 text-white text-base mb-5 ${emailError ? 'border-[#EF4444]' : 'border-[#374151]'}`}
-              placeholder="Enter your email"
-              placeholderTextColor="#6B7280"
+              className={`bg-gray-50 border rounded-lg py-3 px-4 text-gray-900 text-base mb-2 ${emailError ? 'border-red-500' : 'border-gray-200'}`}
+              placeholder="Email"
+              placeholderTextColor="#9CA3AF"
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
@@ -313,56 +331,43 @@ export default function SettingsScreen() {
               }}
               keyboardType="email-address"
               autoCapitalize="none"
-              autoComplete="email"
             />
-            {emailError && (
-              <Text className="text-[#EF4444] text-xs mt-[-20px] mb-3 px-1">{emailError}</Text>
-            )}
-
+            {emailError ? <Text className="text-red-500 text-xs mb-4">{emailError}</Text> : null}
             <TouchableOpacity
-              className={`bg-[#9333EA] py-4 rounded-xl items-center mb-6 ${loadingEmail ? 'opacity-60' : ''}`}
+              className={`bg-gray-900 py-3 rounded-lg items-center mb-8 ${loadingEmail ? 'opacity-60' : ''}`}
               onPress={handleUpdateEmail}
               disabled={loadingEmail}
             >
               {loadingEmail ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <Text className="text-white text-base font-semibold">Update Email</Text>
+                <Text className="text-white text-sm font-semibold">Update Email</Text>
               )}
             </TouchableOpacity>
 
-            <View className="h-px bg-[#1F1F1F] my-8" />
-
-            <Text className="text-white text-lg font-bold mb-5">Change Password</Text>
-            <Text className="text-white text-sm font-semibold mb-2">Current Password</Text>
-            <View className="relative mb-5">
+            <Text className="text-gray-500 text-xs font-medium mb-3 uppercase tracking-wide">Password</Text>
+            <View className="relative mb-3">
               <TextInput
-                className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 pr-12 text-white text-base"
-                placeholder="Enter current password"
-                placeholderTextColor="#6B7280"
+                className="bg-gray-50 border border-gray-200 rounded-lg py-3 px-4 pr-12 text-gray-900 text-base"
+                placeholder="Current password"
+                placeholderTextColor="#9CA3AF"
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
                 secureTextEntry={!showCurrentPassword}
                 autoCapitalize="none"
               />
               <TouchableOpacity
-                className="absolute right-4 top-3.5 p-1"
+                className="absolute right-3 top-3 p-1"
                 onPress={() => setShowCurrentPassword(!showCurrentPassword)}
               >
-                <MaterialIcons
-                  name={showCurrentPassword ? "visibility" : "visibility-off"}
-                  size={20}
-                  color="#9CA3AF"
-                />
+                <MaterialIcons name={showCurrentPassword ? "visibility" : "visibility-off"} size={20} color="#9CA3AF" />
               </TouchableOpacity>
             </View>
-
-            <Text className="text-white text-sm font-semibold mb-2">New Password</Text>
-            <View className="relative mb-5">
+            <View className="relative mb-3">
               <TextInput
-                className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 pr-12 text-white text-base ${passwordError ? 'border-[#EF4444]' : 'border-[#374151]'}`}
-                placeholder="Enter new password (min 8 characters)"
-                placeholderTextColor="#6B7280"
+                className={`bg-gray-50 border rounded-lg py-3 px-4 pr-12 text-gray-900 text-base ${passwordError ? 'border-red-500' : 'border-gray-200'}`}
+                placeholder="New password"
+                placeholderTextColor="#9CA3AF"
                 value={newPassword}
                 onChangeText={(text) => {
                   setNewPassword(text);
@@ -372,23 +377,17 @@ export default function SettingsScreen() {
                 autoCapitalize="none"
               />
               <TouchableOpacity
-                className="absolute right-4 top-3.5 p-1"
+                className="absolute right-3 top-3 p-1"
                 onPress={() => setShowNewPassword(!showNewPassword)}
               >
-                <MaterialIcons
-                  name={showNewPassword ? "visibility" : "visibility-off"}
-                  size={20}
-                  color="#9CA3AF"
-                />
+                <MaterialIcons name={showNewPassword ? "visibility" : "visibility-off"} size={20} color="#9CA3AF" />
               </TouchableOpacity>
             </View>
-
-            <Text className="text-white text-sm font-semibold mb-2">Confirm New Password</Text>
-            <View className="relative mb-5">
+            <View className="relative mb-3">
               <TextInput
-                className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 pr-12 text-white text-base ${passwordError ? 'border-[#EF4444]' : 'border-[#374151]'}`}
+                className={`bg-gray-50 border rounded-lg py-3 px-4 pr-12 text-gray-900 text-base ${passwordError ? 'border-red-500' : 'border-gray-200'}`}
                 placeholder="Confirm new password"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor="#9CA3AF"
                 value={confirmPassword}
                 onChangeText={(text) => {
                   setConfirmPassword(text);
@@ -398,45 +397,108 @@ export default function SettingsScreen() {
                 autoCapitalize="none"
               />
               <TouchableOpacity
-                className="absolute right-4 top-3.5 p-1"
+                className="absolute right-3 top-3 p-1"
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
-                <MaterialIcons
-                  name={showConfirmPassword ? "visibility" : "visibility-off"}
-                  size={20}
-                  color="#9CA3AF"
-                />
+                <MaterialIcons name={showConfirmPassword ? "visibility" : "visibility-off"} size={20} color="#9CA3AF" />
               </TouchableOpacity>
             </View>
-            {passwordError && (
-              <Text className="text-[#EF4444] text-xs mt-[-20px] mb-3 px-1">{passwordError}</Text>
-            )}
-
+            {passwordError ? <Text className="text-red-500 text-xs mb-4">{passwordError}</Text> : null}
             <TouchableOpacity
-              className={`bg-[#9333EA] py-4 rounded-xl items-center mb-6 ${loadingPassword ? 'opacity-60' : ''}`}
+              className={`bg-gray-900 py-3 rounded-lg items-center ${loadingPassword ? 'opacity-60' : ''}`}
               onPress={handleUpdatePassword}
               disabled={loadingPassword}
             >
               {loadingPassword ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <Text className="text-white text-base font-semibold">Update Password</Text>
+                <Text className="text-white text-sm font-semibold">Update Password</Text>
               )}
             </TouchableOpacity>
-          </View>
-        )}
+            </View>
+          )}
 
-        {/* Logout Button */}
-        <View className="px-5 mt-6">
-          <View className="h-px bg-[#1F1F1F] mb-6" />
+          {/* Liked Events */}
           <TouchableOpacity
-            className="bg-[#EF4444] py-4 rounded-xl items-center"
-            onPress={handleLogout}
+            className="flex-row items-center justify-between py-4 border-b border-gray-200"
+            onPress={() => setExpandedSection(expandedSection === 'liked' ? null : 'liked')}
             activeOpacity={0.7}
           >
-            <Text className="text-white text-base font-semibold">Logout</Text>
+            <View className="flex-row items-center">
+              <MaterialIcons name="favorite-border" size={22} color="#111827" style={{ marginRight: 12 }} />
+              <Text className="text-gray-900 text-base font-medium">Liked Events</Text>
+            </View>
+            <View className="flex-row items-center">
+              <Text className="text-gray-500 text-sm mr-2">{likedEventsVisibility === 'public' ? 'Public' : 'Private'}</Text>
+              <MaterialIcons
+                name={expandedSection === 'liked' ? 'expand-less' : 'expand-more'}
+                size={24}
+                color="#6B7280"
+              />
+            </View>
           </TouchableOpacity>
+
+          {expandedSection === 'liked' && (
+            <View className="pb-6 pt-2">
+              <Text className="text-gray-600 text-sm mb-3">
+                Choose who can see your liked events on your public profile
+              </Text>
+              <View className="flex-row gap-2">
+                <TouchableOpacity
+                  className={`flex-1 py-3 rounded-lg items-center border ${likedEventsVisibility === 'public' ? 'bg-primary border-primary' : 'bg-gray-50 border-gray-200'}`}
+                  onPress={async () => {
+                    if (likedEventsVisibility === 'public') return;
+                    setLoadingLikedVisibility(true);
+                    try {
+                      const res = await authAPI.updateUser({ likedEventsVisibility: 'public' });
+                      if (res.success && res.user) {
+                        setUser(res.user);
+                        setLikedEventsVisibility('public');
+                      }
+                    } finally {
+                      setLoadingLikedVisibility(false);
+                    }
+                  }}
+                  disabled={loadingLikedVisibility}
+                >
+                  <Text className={`text-sm font-semibold ${likedEventsVisibility === 'public' ? 'text-white' : 'text-gray-600'}`}>
+                    Public
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className={`flex-1 py-3 rounded-lg items-center border ${likedEventsVisibility === 'private' ? 'bg-gray-900 border-gray-900' : 'bg-gray-50 border-gray-200'}`}
+                  onPress={async () => {
+                    if (likedEventsVisibility === 'private') return;
+                    setLoadingLikedVisibility(true);
+                    try {
+                      const res = await authAPI.updateUser({ likedEventsVisibility: 'private' });
+                      if (res.success && res.user) {
+                        setUser(res.user);
+                        setLikedEventsVisibility('private');
+                      }
+                    } finally {
+                      setLoadingLikedVisibility(false);
+                    }
+                  }}
+                  disabled={loadingLikedVisibility}
+                >
+                  <Text className={`text-sm font-semibold ${likedEventsVisibility === 'private' ? 'text-white' : 'text-gray-600'}`}>
+                    Private
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
+
+        {/* Logout */}
+        <TouchableOpacity
+          className="mt-12 py-4 items-center"
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <Text className="text-red-600 text-sm font-semibold">Log out</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       <Modal

@@ -41,6 +41,8 @@ export interface Event {
     profileImageUrl?: string | null;
   }[];
   joinedCount?: number;
+  likeCount?: number;
+  isLiked?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -128,6 +130,18 @@ export const eventsAPI = {
   // Get Event By ID
   getEventById: async (id: string): Promise<EventResponse> => {
     const response = await apiClient.get(`/events/${id}`);
+    return response.data;
+  },
+
+  // Like Event
+  likeEvent: async (id: string): Promise<{ success: boolean; likeCount: number; liked: boolean }> => {
+    const response = await apiClient.post(`/events/${id}/like`);
+    return response.data;
+  },
+
+  // Unlike Event
+  unlikeEvent: async (id: string): Promise<{ success: boolean; likeCount: number; liked: boolean }> => {
+    const response = await apiClient.post(`/events/${id}/unlike`);
     return response.data;
   },
 

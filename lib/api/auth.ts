@@ -123,18 +123,21 @@ export interface UserProfile {
   createdEvents?: any[];
   joinedEvents?: string[] | JoinedEvent[]; // Can be IDs (from login) or full objects (from profile)
   likedEvents?: any[];
+  likedEventsVisibility?: 'public' | 'private';
   createdAt?: string;
   updatedAt?: string;
 }
 
-/** Public user profile by ID (no auth required) - name, profile image, created/joined/liked events */
+/** Public user profile by ID (no auth required) - username, profile image, created/joined/liked events */
 export interface PublicUserProfile {
   _id: string;
   id?: string;
+  username?: string;
   fullName: string;
   profileImage?: string | null;
   profileImageUrl?: string | null;
   companyName?: string | null;
+  likedEventsVisibility?: 'public' | 'private';
   createdEvents?: any[];
   joinedEvents?: { event: any; tickets?: any[] }[];
   likedEvents?: any[];
@@ -227,7 +230,7 @@ export const authAPI = {
   },
 
   // Update User (Self Update)
-  updateUser: async (data: { name?: string; email?: string; password?: string }): Promise<{ success: boolean; message: string; user?: UserProfile }> => {
+  updateUser: async (data: { name?: string; email?: string; password?: string; likedEventsVisibility?: 'public' | 'private' }): Promise<{ success: boolean; message: string; user?: UserProfile }> => {
     const response = await apiClient.put('/auth/update', data);
     return response.data;
   },

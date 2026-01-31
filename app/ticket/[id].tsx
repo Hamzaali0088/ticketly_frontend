@@ -246,10 +246,10 @@ export default function TicketScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-[#0F0F0F]">
+      <View className="flex-1 bg-white">
         <View className="flex-1 items-center justify-center p-10">
-          <ActivityIndicator size="large" color="#9333EA" />
-          <Text className="text-white text-base mt-4">Loading ticket...</Text>
+          <ActivityIndicator size="large" color="#DC2626" />
+          <Text className="text-gray-700 text-base mt-4">Loading ticket...</Text>
         </View>
       </View>
     );
@@ -257,11 +257,11 @@ export default function TicketScreen() {
 
   if (error || !ticket) {
     return (
-      <View className="flex-1 bg-[#0F0F0F]">
+      <View className="flex-1 bg-white">
         <View className="flex-1 items-center justify-center p-10">
           <Text className="text-[#EF4444] text-lg mb-6">{error || 'Ticket not found'}</Text>
           <TouchableOpacity
-            className="bg-[#9333EA] py-3 px-6 rounded-xl"
+            className="bg-primary py-3 px-6 rounded-xl"
             onPress={() => router.back()}
           >
             <Text className="text-white text-base font-semibold">Go Back</Text>
@@ -273,11 +273,11 @@ export default function TicketScreen() {
 
   if (!user) {
     return (
-      <View className="flex-1 bg-[#0F0F0F]">
+      <View className="flex-1 bg-white">
         <View className="flex-1 items-center justify-center p-10">
           <Text className="text-[#EF4444] text-lg mb-6">Please login to view your ticket</Text>
           <TouchableOpacity
-            className="bg-[#9333EA] py-3 px-6 rounded-xl"
+            className="bg-primary py-3 px-6 rounded-xl"
             onPress={() => router.push('/login')}
           >
             <Text className="text-white text-base font-semibold">Login</Text>
@@ -297,234 +297,212 @@ export default function TicketScreen() {
     });
   };
 
+  const formatDateShort = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const formatTimestamp = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-PK', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      timeZoneName: 'short',
+    });
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed':
         return '#10B981';
       case 'pending_payment':
-        return '#F59E0B';
+        return '#DC2626';
       case 'payment_in_review':
-        return '#3B82F6'; // Blue for "waiting for approval"
+        return '#3B82F6';
       case 'used':
         return '#6B7280';
       case 'cancelled':
-        return '#EF4444';
+        return '#DC2626';
       default:
         return '#9CA3AF';
     }
   };
 
+  const getStatusBgColor = (status: string) => {
+    // 30% opacity so USER/EMAIL text behind stamp remains visible
+    const colors: Record<string, string> = {
+      confirmed: '#10B9814D',
+      pending_payment: '#DC26264D',
+      payment_in_review: '#3B82F64D',
+      used: '#6B72804D',
+      cancelled: '#DC26264D',
+    };
+    return colors[status] ?? '#9CA3AF4D';
+  };
+
   const getStatusText = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return 'Confirmed';
+        return 'CONFIRMED';
       case 'pending_payment':
-        return 'Pending';
+        return 'PENDING PAYMENT';
       case 'payment_in_review':
-        return 'In Review';
+        return 'IN REVIEW';
       case 'used':
-        return 'Used';
+        return 'USED';
       case 'cancelled':
-        return 'Cancelled';
+        return 'CANCELLED';
       default:
-        return status;
+        return (status || '').toUpperCase().replace(/_/g, ' ');
     }
   };
 
   return (
     <ScrollView
-      className="flex-1 bg-[#0F0F0F]"
+      className="flex-1 bg-white"
       contentContainerStyle={{ paddingBottom: 40 }}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor="#9333EA"
-          colors={["#9333EA"]}
+          tintColor="#DC2626"
+          colors={["#DC2626"]}
         />
       }
     >
       {/* Header */}
-      <View className="flex-row items-center justify-between pt-[60px] px-5 pb-5">
+      <View className="flex-row items-center justify-between pt-[60px] px-5 pb-5 bg-white">
         <TouchableOpacity onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
+          <MaterialIcons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-white text-xl font-bold">Your Ticket</Text>
-        <View style={{ width: 30 }} />
+        <Text className="text-gray-900 text-xl font-bold">Your Ticket</Text>
+        <View className="w-[30px]" />
       </View>
 
-      {/* Ticket Card */}
-      <View className="bg-[#1F1F1F] mx-5 rounded-2xl overflow-hidden mb-6">
-        {/* Ticket Header */}
-        <View className="flex-row justify-between items-center p-5 border-b border-[#374151]">
-          <View className="flex-1">
-            <Text className="text-white text-xl font-bold">ticketly</Text>
-          </View>
-          <View className="items-end">
-            <Text className="text-[#9CA3AF] text-xs mb-1">Ticket #</Text>
-            <Text className="text-white text-sm font-bold">{ticket.accessKey || ticket.id.slice(-8).toUpperCase()}</Text>
-          </View>
-        </View>
-
-        {/* Status Badge */}
-        <View className="px-5 pt-3">
-          <View className="self-start bg-[#1F1F1F] px-3 py-1.5 rounded-lg">
-            <Text style={{ color: getStatusColor(ticket.status) }} className="text-xs font-semibold">
-              {getStatusText(ticket.status)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Event Image */}
-        {ticket.event?.image && (
-          <Image
-            source={{ uri: getEventImageUrl(ticket.event) || 'https://via.placeholder.com/400' }}
-            className="w-full h-[200px] mt-3"
-            resizeMode="cover"
-          />
-        )}
-
-        {/* Event Info */}
-        <View className="p-5">
-          <Text className="text-white text-2xl font-bold mb-1">{ticket.event?.title || 'Event'}</Text>
-          {ticket.organizer && (
-            <Text className="text-[#9333EA] text-sm font-semibold mb-5">
-              by {ticket.organizer.fullName}
-            </Text>
-          )}
-
-          {ticket.event?.date && (
-            <View className="flex-row mb-4 items-start">
-              <MaterialIcons name="calendar-today" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
-              <View className="flex-1">
-                <Text className="text-[#9CA3AF] text-xs mb-1">Date</Text>
-                <Text className="text-white text-sm mb-0.5">
-                  {formatDate(ticket.event.date)} {ticket.event.time && `at ${ticket.event.time}`}
-                </Text>
-              </View>
+      {/* Ticket Card - Paper Style */}
+      <View className="mx-5 mb-6">
+        <View className="bg-white rounded-xl overflow-hidden relative shadow-lg" style={{ elevation: 8 }}>
+          {/* Perforated left edge */}
+          <View className="absolute left-0 top-0 bottom-0 w-3 border-l-2 border-primary border-dashed" />
+          <View className="pl-6 pr-5 py-5">
+            {/* Header: Logo, Title, Tagline */}
+            <View className="items-center mb-3">
+              <Text className="text-lg font-bold text-primary tracking-wide mb-2">ticketly</Text>
+              <Text className="text-[22px] font-bold text-gray-900 text-center uppercase tracking-wide mb-1">
+                {ticket.event?.title || 'Event'}
+              </Text>
+              <Text className="text-[13px] text-gray-600 text-center">
+                {ticket.event?.description?.slice(0, 50) || 'Join us for an unforgettable experience'}
+                {(ticket.event?.description?.length || 0) > 50 ? '...' : ''}
+              </Text>
             </View>
-          )}
+            <View className="h-px bg-primary/40 my-3.5" />
 
-          {ticket.event?.location && (
-            <View className="flex-row mb-4 items-start">
-              <MaterialIcons name="location-on" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
-              <View className="flex-1">
-                <Text className="text-[#9CA3AF] text-xs mb-1">Venue</Text>
-                <Text className="text-white text-sm mb-0.5">{ticket.event.location}</Text>
-              </View>
-            </View>
-          )}
-
-          {ticket.event?.ticketPrice !== undefined && (
-            <View className="flex-row mb-4 items-start">
-              <MaterialIcons name="confirmation-number" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
-              <View className="flex-1">
-                <Text className="text-[#9CA3AF] text-xs mb-1">Ticket Price</Text>
-                <Text className="text-white text-sm mb-0.5">
-                  PKR {ticket.event.ticketPrice.toLocaleString()}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          <View className="flex-row mb-4 items-start">
-            <MaterialIcons name="person-outline" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
-            <View className="flex-1">
-              <Text className="text-[#9CA3AF] text-xs mb-1">Attendee</Text>
-              <Text className="text-white text-sm mb-0.5">{ticket.username}</Text>
-              <Text className="text-white text-sm mb-0.5">{ticket.email}</Text>
-              {ticket.phone && (
-                <Text className="text-white text-sm mb-0.5">{ticket.phone}</Text>
+            {/* Event Details - Bulleted */}
+            <View className="gap-1.5">
+              {ticket.event?.location && (
+                <Text className="text-sm text-gray-900 leading-[22px]">• Location: {ticket.event.location}</Text>
+              )}
+              {ticket.event?.date && (
+                <Text className="text-sm text-gray-900 leading-[22px]">• Date: {formatDateShort(ticket.event.date)}</Text>
+              )}
+              {ticket.event?.time && (
+                <Text className="text-sm text-gray-900 leading-[22px]">• Time: {ticket.event.time}</Text>
+              )}
+              {ticket.event?.ticketPrice !== undefined && (
+                <Text className="text-sm text-gray-900 leading-[22px]">• Price: {ticket.event.ticketPrice.toLocaleString()} PKR</Text>
               )}
             </View>
-          </View>
-        </View>
+            <View className="h-px bg-primary/40 my-3.5" />
 
-        {/* QR Code Section - Show for confirmed tickets */}
-        {ticket.status === 'confirmed' && ticket.accessKey && (
-          <View className="p-5 border-t border-[#374151] items-center">
-            <Text className="text-white text-base font-semibold mb-4">Scan QR Code at Entry</Text>
-            <View className="bg-white p-5 rounded-xl mb-3 items-center justify-center">
-              {/* Always use SVG QR code for reliability */}
-              <QRCode
-                value={ticket.accessKey}
-                size={200}
-                color="#000000"
-                backgroundColor="#FFFFFF"
-              />
-            </View>
-            <Text className="text-[#9CA3AF] text-xs text-center">
-              Please arrive 15 minutes before the event starts
-            </Text>
-          </View>
-        )}
-
-        {/* Access Key & QR Code Section - Show for non-confirmed tickets */}
-        {ticket.status !== 'confirmed' && ticket.accessKey && (
-          <View className="p-5 border-t border-[#374151]">
-            {/* QR Code - Show prominently at the top */}
-            {ticket.accessKey && (
-              <View className="items-center mb-4">
-                <Text className="text-white text-base font-semibold mb-3">Your Ticket QR Code</Text>
-                <View className="bg-white p-4 rounded-xl items-center justify-center">
-                  {/* Always use SVG QR code for reliability */}
-                  <QRCode
-                    value={ticket.accessKey}
-                    size={200}
-                    color="#000000"
-                    backgroundColor="#FFFFFF"
-                  />
-                </View>
-                <View className="bg-[#F59E0B]/20 rounded-lg px-4 py-2 mt-3">
-                  <Text className="text-[#F59E0B] text-xs text-center font-semibold">
-                    Complete payment to activate this ticket
+            {/* Status + User Info + QR Row */}
+            <View className="flex-row justify-between items-start mt-2">
+              <View className="flex-1 relative">
+                <Text className="text-[13px] text-gray-800 mb-0.5">USER: {ticket.username}</Text>
+                <Text className="text-[13px] text-gray-800 mb-0.5">EMAIL: {ticket.email}</Text>
+                {/* Status Stamp - overlaps user info */}
+                <View
+                  className="absolute -top-10 right-2 border-2 border-dashed py-2 px-3 rotate-[8deg]"
+                  style={{
+                    borderColor: getStatusColor(ticket.status),
+                    backgroundColor: getStatusBgColor(ticket.status),
+                  }}
+                >
+                  <Text
+                    className="text-xs font-bold tracking-wide"
+                    style={{ color: getStatusColor(ticket.status) 
+                    }}
+                  >
+                   {getStatusText(ticket.status)}
                   </Text>
                 </View>
               </View>
-            )}
-            
-            {/* Ticket Number */}
-            <View className="flex-row items-center mb-3">
-              <MaterialIcons name="confirmation-number" size={20} color="#9CA3AF" style={{ marginRight: 8 }} />
-              <Text className="text-white text-sm font-semibold">Ticket Number</Text>
+              {ticket.accessKey && (
+                <View className="ml-4">
+                  <View className="bg-white p-2 rounded-lg border border-primary">
+                    <QRCode
+                      value={ticket.accessKey}
+                      size={100}
+                      color="#1F1F1F"
+                      backgroundColor="#FFFFFF"
+                    />
+                  </View>
+                </View>
+              )}
             </View>
-            <View className="bg-[#0F0F0F] rounded-xl p-4 border border-[#374151]">
-              <Text className="text-[#D1D5DB] text-xs font-mono text-center" selectable>
-                {ticket.accessKey}
-              </Text>
-            </View>
-          </View>
-        )}
 
+            {/* Timestamp & Access Key */}
+            {ticket.createdAt && (
+              <Text className="text-[11px] text-gray-500 mt-3.5 mb-1">{formatTimestamp(ticket.createdAt)}</Text>
+            )}
+            {ticket.accessKey && (
+              <Text className="text-[11px] text-primary font-semibold">ACCESS KEY: {ticket.accessKey}</Text>
+            )}
+          </View>
+        </View>
+      </View>
+
+      {/* Payment section - separate card below ticket */}
+      {(ticket.status === 'payment_in_review' || ticket.status === 'pending_payment') && (
+        <View className="mx-5 mt-4 mb-6 bg-white rounded-2xl p-5 border border-gray-200">
         {ticket.status === 'payment_in_review' && (
-          <View className="p-5 border-t border-[#374151]">
+          <View>
             <View className="items-center mb-4">
-              <Text className="text-[#3B82F6] text-base font-semibold mb-2">
+              <Text className="text-gray-900 text-base font-semibold mb-2">
                 In Review
               </Text>
-              <Text className="text-[#9CA3AF] text-sm text-center mb-1">
+              <Text className="text-gray-900 text-sm text-start mb-1">
                 Your payment screenshot has been submitted successfully.
               </Text>
-              <Text className="text-[#9CA3AF] text-sm text-center mb-1">
+              <Text className="text-gray-900 text-sm text-start mb-1">
                 Our team will verify your payment within 24-48 hours.
               </Text>
-              <Text className="text-[#9CA3AF] text-sm text-center">
+              <Text className="text-gray-900 text-sm text-start">
                 You can update the screenshot until verification is complete.
               </Text>
             </View>
 
             {/* Payment Method Selection */}
             <View className="mb-4">
-              <Text className="text-[#9CA3AF] text-xs mb-2">Payment Method</Text>
+              <Text className="text-gray-900 text-xs mb-2">Payment Method</Text>
               <View className="flex-row gap-2">
                 {['bank_transfer', 'easypaisa', 'jazzcash', 'other'].map((method) => (
                   <TouchableOpacity
                     key={method}
                     onPress={() => setPaymentMethod(method)}
                     className={`px-3 py-2 rounded-lg border ${paymentMethod === method
-                      ? 'bg-[#9333EA] border-[#9333EA]'
-                      : 'bg-[#1F1F1F] border-[#374151]'
+                      ? 'bg-primary border-primary'
+                      : 'bg-gray-100 border-gray-200'
                       }`}
                   >
                     <Text
@@ -547,7 +525,7 @@ export default function TicketScreen() {
                 const phoneNumber = ticket.event?.createdBy?.phone || ticket.event?.phone || ticket.organizer?.phone;
                 return phoneNumber ? (
                   <View className="mt-3">
-                    <Text className="text-[#9CA3AF] text-xs mb-1">
+                    <Text className="text-gray-900 text-xs mb-1">
                       Send payment to: {phoneNumber}
                     </Text>
                   </View>
@@ -557,7 +535,7 @@ export default function TicketScreen() {
 
             {/* Screenshot Display/Update */}
             <View className="mb-4">
-              <Text className="text-[#9CA3AF] text-xs mb-2">Payment Screenshot</Text>
+              <Text className="text-gray-900 text-xs mb-2">Payment Screenshot</Text>
               {getPaymentScreenshotUrl() ? (
                 <View className="relative">
                   <Image
@@ -573,7 +551,7 @@ export default function TicketScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={pickScreenshot}
-                    className="absolute bottom-2 right-2 bg-[#9333EA] px-3 py-1.5 rounded-lg flex-row items-center"
+                    className="absolute bottom-2 right-2 bg-primary px-3 py-1.5 rounded-lg flex-row items-center"
                   >
                     <MaterialIcons name="edit" size={16} color="#FFFFFF" />
                     <Text className="text-white text-xs font-semibold ml-1">Update</Text>
@@ -614,7 +592,7 @@ export default function TicketScreen() {
               }}
               className={`py-4 rounded-xl items-center ${!screenshotUri || uploadingPayment
                 ? 'bg-[#374151]'
-                : 'bg-[#9333EA]'
+                : 'bg-primary'
                 }`}
             >
               {uploadingPayment ? (
@@ -634,7 +612,7 @@ export default function TicketScreen() {
         )}
 
         {ticket.status === 'pending_payment' && (
-          <View className="p-5 border-t border-[#374151]">
+          <View>
             <Text className="text-[#F59E0B] text-base font-semibold mb-2 text-center">
               Payment Pending
             </Text>
@@ -651,8 +629,8 @@ export default function TicketScreen() {
                     key={method}
                     onPress={() => setPaymentMethod(method)}
                     className={`px-3 py-2 rounded-lg border ${paymentMethod === method
-                      ? 'bg-[#9333EA] border-[#9333EA]'
-                      : 'bg-[#1F1F1F] border-[#374151]'
+                      ? 'bg-primary border-primary'
+                      : 'bg-gray-100 border-gray-200'
                       }`}
                   >
                     <Text
@@ -705,13 +683,14 @@ export default function TicketScreen() {
                   onPress={pickScreenshot}
                   className="border-2 border-dashed border-[#374151] rounded-xl p-8 items-center justify-center bg-[#0F0F0F]"
                 >
-                  <MaterialIcons name="add-photo-alternate" size={48} color="#9CA3AF" />
-                  <Text className="text-[#9CA3AF] text-sm mt-2 text-center">
+                  <MaterialIcons name="add-photo-alternate" size={48} color="#E5E7EB" />
+                  <Text className="text-gray-200 text-sm mt-2 text-center">
                     Tap to select payment screenshot
                   </Text>
-                  <Text className="text-[#6B7280] text-xs mt-1 text-center">
-                    JPEG, PNG, GIF, or WebP (Max 5MB)
-                  </Text>
+                  <View className="mt-2 w-full items-start px-4">
+                    <Text className="text-gray-300 text-xs">• JPEG, PNG, GIF, or WebP</Text>
+                    <Text className="text-gray-300 text-xs">• Max 5MB</Text>
+                  </View>
                 </TouchableOpacity>
               )}
             </View>
@@ -742,7 +721,7 @@ export default function TicketScreen() {
               }}
               className={`py-4 rounded-xl items-center ${!screenshotUri || uploadingPayment
                 ? 'bg-[#374151]'
-                : 'bg-[#9333EA]'
+                : 'bg-primary'
                 }`}
             >
               {uploadingPayment ? (
@@ -760,23 +739,24 @@ export default function TicketScreen() {
             </TouchableOpacity>
           </View>
         )}
-
-        {/* Ticket Footer */}
-        <View className="p-5 border-t border-[#374151] bg-[#0F0F0F]">
-          <Text className="text-[#6B7280] text-xs text-center mb-1">
-            This ticket is valid for one person only
-          </Text>
-          <Text className="text-[#6B7280] text-xs text-center mb-1">
-            For support, contact: support@ticketly.com
-          </Text>
         </View>
+      )}
+
+      {/* Ticket Footer */}
+      <View className="mx-5 mb-6 p-5 rounded-2xl bg-gray-100 border border-gray-200">
+        <Text className="text-gray-700 text-xs text-center mb-1">
+          This ticket is valid for one person only
+        </Text>
+        <Text className="text-gray-700 text-xs text-center mb-1">
+          For support, contact: support@ticketly.com
+        </Text>
       </View>
 
       {/* Actions */}
       {ticket.status === 'confirmed' && (
         <View className="flex-row gap-3 px-5">
           <TouchableOpacity
-            className="flex-1 bg-[#9333EA] py-4 rounded-xl items-center"
+            className="flex-1 bg-primary py-4 rounded-xl items-center"
             onPress={() => {
               Alert.alert('Download', 'Ticket download feature coming soon!');
             }}
@@ -784,12 +764,12 @@ export default function TicketScreen() {
             <Text className="text-white text-base font-semibold">Download Ticket</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className="flex-1 bg-[#1F1F1F] border border-[#374151] py-4 rounded-xl items-center"
+            className="flex-1 bg-gray-100 border border-gray-200 py-4 rounded-xl items-center"
             onPress={() => {
               Alert.alert('Share', 'Ticket sharing feature coming soon!');
             }}
           >
-            <Text className="text-white text-base font-semibold">Share</Text>
+            <Text className="text-gray-900 text-base font-semibold">Share</Text>
           </TouchableOpacity>
         </View>
       )}

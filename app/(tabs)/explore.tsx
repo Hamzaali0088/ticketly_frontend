@@ -141,7 +141,7 @@ export default function ExploreScreen() {
   };
 
   return (
-    <View className="flex-1 bg-[#0F0F0F]">
+    <View className="flex-1 bg-white">
       {/* Header: hides when scrolling down, shows when scrolling up */}
       <Animated.View
         pointerEvents="box-none"
@@ -155,22 +155,22 @@ export default function ExploreScreen() {
         }}
       >
         <View
-          className="bg-[#0F0F0F] border-b border-[#1F1F1F]"
+          className="bg-white border-b border-gray-200"
           style={{ paddingTop: safeTop }}
         >
           <View className="px-5 pb-3  flex-row items-center justify-between">
             <View className="w-10" />
-            <Text className="text-2xl font-bold text-white">ticketly</Text>
+            <Text className="text-2xl font-bold text-gray-900">ticketly</Text>
             <TouchableOpacity
               className="w-10 h-10 items-center justify-center"
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <MaterialIcons name="search" size={26} color="#FFFFFF" />
+              <MaterialIcons name="search" size={26} color="#111827" />
             </TouchableOpacity>
           </View>
           <View className="px-5 pb-4">
             <TextInput
-              className="bg-[#1F1F1F] rounded-xl py-3 px-4 text-white text-sm"
+              className="bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-gray-900 text-sm"
               placeholder="Search by event..."
               placeholderTextColor="#6B7280"
               value={searchQuery}
@@ -194,8 +194,8 @@ export default function ExploreScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#9333EA"
-              colors={["#9333EA"]}
+              tintColor="#DC2626"
+              colors={["#DC2626"]}
             />
           }
         >
@@ -224,8 +224,8 @@ export default function ExploreScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#9333EA"
-              colors={["#9333EA"]}
+              tintColor="#DC2626"
+              colors={["#DC2626"]}
             />
           }
           ListEmptyComponent={

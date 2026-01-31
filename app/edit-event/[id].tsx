@@ -337,10 +337,10 @@ export default function EditEventScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-[#0F0F0F]">
+      <View className="flex-1 bg-white">
         <View className="flex-1 items-center justify-center p-10">
-          <ActivityIndicator size="large" color="#9333EA" />
-          <Text className="text-white text-base mt-4">Loading event...</Text>
+          <ActivityIndicator size="large" color="#DC2626" />
+          <Text className="text-gray-700 text-base mt-4">Loading event...</Text>
         </View>
       </View>
     );
@@ -348,7 +348,7 @@ export default function EditEventScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-[#0F0F0F]"
+      className="flex-1 bg-white"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
@@ -358,25 +358,25 @@ export default function EditEventScreen() {
       >
         <View className="flex-row items-center justify-between pt-[60px] px-5 pb-5">
           <TouchableOpacity onPress={() => router.back()}>
-            <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
+            <MaterialIcons name="arrow-back" size={24} color="#111827" />
           </TouchableOpacity>
-          <Text className="text-white text-xl font-bold">Edit Event</Text>
+          <Text className="text-gray-900 text-xl font-bold">Edit Event</Text>
           <View style={{ width: 30 }} />
         </View>
 
         <View className="px-5">
-          <Text className="text-white text-sm font-semibold mb-2 mt-4">Name</Text>
+          <Text className="text-gray-900 text-sm font-semibold mb-2 mt-4">Name</Text>
           <TextInput
-            className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base"
+            className="bg-gray-50 border border-gray-200 rounded-xl py-3.5 px-4 text-gray-900 text-base"
             placeholder="e.g. Fatima Ali"
             placeholderTextColor="#6B7280"
             value={formData.name}
             onChangeText={(value) => handleInputChange('name', value)}
           />
 
-          <Text className="text-white text-sm font-semibold mb-2 mt-4">Email</Text>
+          <Text className="text-gray-900 text-sm font-semibold mb-2 mt-4">Email</Text>
           <TextInput
-            className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base"
+            className="bg-gray-50 border border-gray-200 rounded-xl py-3.5 px-4 text-gray-900 text-base"
             placeholder="e.g. fatimaali@gmail.com"
             placeholderTextColor="#6B7280"
             value={formData.email}
@@ -385,14 +385,14 @@ export default function EditEventScreen() {
             autoCapitalize="none"
           />
 
-          <Text className="text-white text-sm font-semibold mb-2 mt-4">Phone Number</Text>
+          <Text className="text-gray-900 text-sm font-semibold mb-2 mt-4">Phone Number</Text>
           <View className="flex-row gap-2">
-            <TouchableOpacity className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-3 flex-row items-center gap-2">
-              <Text className="text-white text-base font-semibold">PK</Text>
+            <TouchableOpacity className="bg-gray-50 border border-gray-200 rounded-xl py-3.5 px-3 flex-row items-center gap-2">
+              <Text className="text-gray-900 text-base font-semibold">PK</Text>
               <MaterialIcons name="expand-more" size={16} color="#9CA3AF" />
             </TouchableOpacity>
             <TextInput
-              className="flex-1 bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base"
+              className="flex-1 bg-gray-50 border border-gray-200 rounded-xl py-3.5 px-4 text-gray-900 text-base"
               placeholder="+92 334495437"
               placeholderTextColor="#6B7280"
               value={formData.phone}
@@ -401,18 +401,18 @@ export default function EditEventScreen() {
             />
           </View>
 
-          <Text className="text-white text-sm font-semibold mb-2 mt-4">Company Name</Text>
+          <Text className="text-gray-900 text-sm font-semibold mb-2 mt-4">Company Name</Text>
           <TextInput
-            className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base"
+            className="bg-gray-50 border border-gray-200 rounded-xl py-3.5 px-4 text-gray-900 text-base"
             placeholder="e.g. Paymo events"
             placeholderTextColor="#6B7280"
             value={formData.companyName}
             onChangeText={(value) => handleInputChange('companyName', value)}
           />
 
-          <Text className="text-white text-sm font-semibold mb-2 mt-4">Event Name</Text>
+          <Text className="text-gray-900 text-sm font-semibold mb-2 mt-4">Event Name</Text>
           <TextInput
-            className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base"
+            className="bg-gray-50 border border-gray-200 rounded-xl py-3.5 px-4 text-gray-900 text-base"
             placeholder="e.g. Catcha cat"
             placeholderTextColor="#6B7280"
             value={formData.eventName}
@@ -456,7 +456,7 @@ export default function EditEventScreen() {
                     <Text className="text-white text-sm">Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    className="bg-[#9333EA] px-4 py-2 rounded-lg"
+                    className="bg-primary px-4 py-2 rounded-lg"
                     onPress={() => setShowDatePicker(false)}
                   >
                     <Text className="text-white text-sm font-semibold">Done</Text>
@@ -539,8 +539,8 @@ export default function EditEventScreen() {
                 />
                 {uploadingImage && (
                   <View className="flex-row items-center">
-                    <ActivityIndicator color="#9333EA" size="small" />
-                    <Text className="text-[#9333EA] text-sm ml-2">Uploading...</Text>
+                    <ActivityIndicator color="#DC2626" size="small" />
+                    <Text className="text-primary text-sm ml-2">Uploading...</Text>
                   </View>
                 )}
                 {formData.imageUrl && !uploadingImage && (
@@ -555,8 +555,8 @@ export default function EditEventScreen() {
               </View>
             ) : (
               <View className="flex-row items-center">
-                <MaterialIcons name="add-photo-alternate" size={24} color="#9333EA" />
-                <Text className="text-[#9333EA] text-base font-semibold ml-2">
+                <MaterialIcons name="add-photo-alternate" size={24} color="#DC2626" />
+                <Text className="text-primary text-base font-semibold ml-2">
                   {uploadingImage ? 'Uploading...' : 'Select Image from Gallery'}
                 </Text>
               </View>
@@ -596,7 +596,7 @@ export default function EditEventScreen() {
           />
 
           <TouchableOpacity
-            className={`bg-[#9333EA] py-4 rounded-xl items-center mt-8 ${saving ? 'opacity-60' : ''}`}
+            className={`bg-primary py-4 rounded-xl items-center mt-8 ${saving ? 'opacity-60' : ''}`}
             onPress={handleSubmit}
             disabled={saving}
           >

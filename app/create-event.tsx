@@ -262,34 +262,34 @@ export default function CreateEventScreen() {
     return x;
   })();
 
-  const inputRow = 'bg-[#1F1F1F] rounded-2xl py-3 px-4 flex-row items-center gap-3 border border-[#374151]';
-  const iconWrap = 'w-10 h-10 rounded-full bg-[#374151] items-center justify-center';
-  const labelClass = 'text-white text-sm font-medium mb-2';
+  const inputRow = 'bg-gray-50 rounded-2xl py-3 px-4 flex-row items-center gap-3 border border-gray-200';
+  const iconWrap = 'w-10 h-10 rounded-full bg-gray-200 items-center justify-center';
+  const labelClass = 'text-gray-900 text-sm font-medium mb-2';
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-[#0F0F0F]"
+      className="flex-1 bg-white"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Header: back, progress bar, step label */}
-      <View className="pt-[52px] px-4 pb-4 border-b border-[#1F1F1F]">
+      <View className="pt-[52px] px-4 pb-4 border-b border-gray-200">
         <View className="flex-row items-center justify-between mb-4">
           <TouchableOpacity onPress={() => (step === 1 ? router.back() : setStep(1))} className="p-2 -ml-2">
-            <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
+            <MaterialIcons name="arrow-back" size={24} color="#111827" />
           </TouchableOpacity>
           <View className="flex-1 flex-row items-center justify-center gap-2">
-            <View className="flex-1 h-1.5 rounded-full bg-[#374151] overflow-hidden">
+            <View className="flex-1 h-1.5 rounded-full bg-gray-200 overflow-hidden">
               <View
-                className="h-full rounded-full bg-[#9333EA]"
+                className="h-full rounded-full bg-primary"
                 style={{ width: step === 1 ? '50%' : '100%' }}
               />
             </View>
           </View>
-          <Text className="text-white text-sm font-medium ml-2 w-10 text-right">
+          <Text className="text-gray-900 text-sm font-medium ml-2 w-10 text-right">
             {step} of 2
           </Text>
         </View>
-        <Text className="text-white text-2xl font-bold">
+        <Text className="text-gray-900 text-2xl font-bold">
           {step === 1 ? 'Event Details' : 'Payment and Ticket Details'}
         </Text>
       </View>
@@ -305,7 +305,7 @@ export default function CreateEventScreen() {
             <TouchableOpacity
               onPress={pickImage}
               disabled={uploadingImage}
-              className="w-full aspect-[16/9] rounded-2xl border-2 border-[#9333EA] overflow-hidden bg-[#1F1F1F] mb-6"
+              className="w-full aspect-[16/9] rounded-2xl border-2 border-primary overflow-hidden bg-gray-50 mb-6"
             >
               {formData.imageUri ? (
                 <View className="w-full h-full relative">
@@ -333,13 +333,13 @@ export default function CreateEventScreen() {
                   </View>
                   {uploadingImage && (
                     <View className="absolute inset-0 bg-black/50 items-center justify-center">
-                      <ActivityIndicator color="#9333EA" size="large" />
+                      <ActivityIndicator color="#DC2626" size="large" />
                     </View>
                   )}
                 </View>
               ) : (
                 <View className="flex-1 items-center justify-center">
-                  <MaterialIcons name="add-photo-alternate" size={48} color="#9333EA" />
+                  <MaterialIcons name="add-photo-alternate" size={48} color="#DC2626" />
                   <Text className="text-[#9CA3AF] mt-2">Tap to add Thumbnail</Text>
                 </View>
               )}
@@ -352,7 +352,7 @@ export default function CreateEventScreen() {
               placeholderTextColor="#6B7280"
               value={formData.eventName}
               onChangeText={(v) => handleInputChange('eventName', v)}
-              style={{ color: '#FFF' }}
+              style={{ color: '#111827' }}
             />
             {errors.eventName ? <Text className="text-[#EF4444] text-xs mb-3">{errors.eventName}</Text> : null}
 
@@ -391,10 +391,10 @@ export default function CreateEventScreen() {
               <View className="mb-4">
                 {Platform.OS === 'ios' && (
                   <View className="flex-row justify-end gap-2 mb-2">
-                    <TouchableOpacity className="bg-[#1F1F1F] px-4 py-2 rounded-lg" onPress={() => setShowDatePicker(false)}>
-                      <Text className="text-white text-sm">Cancel</Text>
+                    <TouchableOpacity className="bg-gray-100 px-4 py-2 rounded-lg" onPress={() => setShowDatePicker(false)}>
+                      <Text className="text-gray-900 text-sm">Cancel</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity className="bg-[#9333EA] px-4 py-2 rounded-lg" onPress={() => setShowDatePicker(false)}>
+                    <TouchableOpacity className="bg-primary px-4 py-2 rounded-lg" onPress={() => setShowDatePicker(false)}>
                       <Text className="text-white text-sm font-semibold">Done</Text>
                     </TouchableOpacity>
                   </View>
@@ -418,10 +418,10 @@ export default function CreateEventScreen() {
               <View className="mb-4">
                 {Platform.OS === 'ios' && (
                   <View className="flex-row justify-end gap-2 mb-2">
-                    <TouchableOpacity className="bg-[#1F1F1F] px-4 py-2 rounded-lg" onPress={() => setShowTimePicker(false)}>
-                      <Text className="text-white text-sm">Cancel</Text>
+                    <TouchableOpacity className="bg-gray-100 px-4 py-2 rounded-lg" onPress={() => setShowTimePicker(false)}>
+                      <Text className="text-gray-900 text-sm">Cancel</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity className="bg-[#9333EA] px-4 py-2 rounded-lg" onPress={() => setShowTimePicker(false)}>
+                    <TouchableOpacity className="bg-primary px-4 py-2 rounded-lg" onPress={() => setShowTimePicker(false)}>
                       <Text className="text-white text-sm font-semibold">Done</Text>
                     </TouchableOpacity>
                   </View>
@@ -477,31 +477,31 @@ export default function CreateEventScreen() {
                 onPress={() => setShowGenderModal(false)}
               >
                 <Pressable
-                  className="bg-[#1F1F1F] rounded-t-2xl border-t border-[#374151] px-4 pb-8 pt-2"
+                  className="bg-white rounded-t-2xl border-t border-gray-200 px-4 pb-8 pt-2"
                   onPress={(e) => e.stopPropagation()}
                 >
                   <View className="items-center pt-2 pb-3">
-                    <View className="w-10 h-1 rounded-full bg-[#4B5563]" />
+                    <View className="w-10 h-1 rounded-full bg-gray-300" />
                   </View>
-                  <Text className="text-white text-lg font-semibold mb-4">Gender Selection</Text>
+                  <Text className="text-gray-900 text-lg font-semibold mb-4">Gender Selection</Text>
                   {GENDER_OPTIONS.map((opt) => {
                     const isSelected = formData.genderSelection === opt;
                     return (
                       <TouchableOpacity
                         key={opt}
-                        className={`flex-row items-center py-3.5 px-4 rounded-xl mb-2 ${isSelected ? 'bg-[#9333EA]/20 border border-[#9333EA]' : 'bg-[#2F2F2F] border border-transparent'}`}
+                        className={`flex-row items-center py-3.5 px-4 rounded-xl mb-2 ${isSelected ? 'bg-primary/10 border border-primary' : 'bg-gray-100 border border-transparent'}`}
                         onPress={() => {
                           handleInputChange('genderSelection', opt);
                           setShowGenderModal(false);
                         }}
                         activeOpacity={0.8}
                       >
-                        <View className="w-10 h-10 rounded-full bg-[#374151] items-center justify-center mr-3">
+                        <View className="w-10 h-10 rounded-full bg-gray-200 items-center justify-center mr-3">
                           <MaterialIcons name="person-outline" size={20} color="#9CA3AF" />
                         </View>
-                        <Text className="text-white text-base font-medium flex-1">{opt}</Text>
+                        <Text className="text-gray-900 text-base font-medium flex-1">{opt}</Text>
                         {isSelected && (
-                          <View className="w-6 h-6 rounded-full bg-[#9333EA] items-center justify-center">
+                          <View className="w-6 h-6 rounded-full bg-primary items-center justify-center">
                             <MaterialIcons name="check" size={14} color="#FFF" />
                           </View>
                         )}
@@ -514,7 +514,7 @@ export default function CreateEventScreen() {
 
             <Text className={labelClass}>Description <Text className="text-[#6B7280]">(optional)</Text></Text>
             <TextInput
-              className="bg-[#1F1F1F] border border-[#374151] rounded-2xl py-3.5 px-4 text-white text-base min-h-[100px] mb-6"
+              className="bg-gray-50 border border-gray-200 rounded-2xl py-3.5 px-4 text-gray-900 text-base min-h-[100px] mb-6"
               placeholder="description"
               placeholderTextColor="#6B7280"
               value={formData.description}
@@ -528,8 +528,8 @@ export default function CreateEventScreen() {
               disabled={!step1Valid}
               className={`w-full py-4 rounded-2xl overflow-hidden ${!step1Valid ? 'opacity-50' : ''}`}
               style={{
-                backgroundColor: '#9333EA',
-                shadowColor: '#9333EA',
+                backgroundColor: '#DC2626',
+                shadowColor: '#DC2626',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.3,
                 shadowRadius: 4,
@@ -548,32 +548,32 @@ export default function CreateEventScreen() {
               <TouchableOpacity
                 onPress={() => handleInputChange('eventType', 'paid')}
                 className={`flex-1 py-4 px-4 rounded-2xl border-2 flex-row items-center justify-center gap-2 ${
-                  formData.eventType === 'paid' ? 'border-[#9333EA] bg-[#9333EA]/10' : 'border-[#374151] bg-[#1F1F1F]'
+                  formData.eventType === 'paid' ? 'border-primary bg-primary/10' : 'border-gray-200 bg-gray-50'
                 }`}
               >
                 {formData.eventType === 'paid' ? (
-                  <View className="w-5 h-5 rounded-full bg-[#9333EA] items-center justify-center">
+                  <View className="w-5 h-5 rounded-full bg-primary items-center justify-center">
                     <MaterialIcons name="check" size={14} color="#FFF" />
                   </View>
                 ) : (
                   <View className="w-5 h-5 rounded-full border-2 border-[#6B7280]" />
                 )}
-                <Text className="text-white font-medium">Paid Event</Text>
+                <Text className="text-gray-900 font-medium">Paid Event</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => handleInputChange('eventType', 'free')}
                 className={`flex-1 py-4 px-4 rounded-2xl border-2 flex-row items-center justify-center gap-2 ${
-                  formData.eventType === 'free' ? 'border-[#9333EA] bg-[#9333EA]/10' : 'border-[#374151] bg-[#1F1F1F]'
+                  formData.eventType === 'free' ? 'border-primary bg-primary/10' : 'border-gray-200 bg-gray-50'
                 }`}
               >
                 {formData.eventType === 'free' ? (
-                  <View className="w-5 h-5 rounded-full bg-[#9333EA] items-center justify-center">
+                  <View className="w-5 h-5 rounded-full bg-primary items-center justify-center">
                     <MaterialIcons name="check" size={14} color="#FFF" />
                   </View>
                 ) : (
                   <View className="w-5 h-5 rounded-full border-2 border-[#6B7280]" />
                 )}
-                <Text className="text-white font-medium">Free Event</Text>
+                <Text className="text-gray-900 font-medium">Free Event</Text>
               </TouchableOpacity>
             </View>
 
@@ -619,34 +619,34 @@ export default function CreateEventScreen() {
                     onPress={() => setShowCurrencyModal(false)}
                   >
                     <Pressable
-                      className="bg-[#1F1F1F] rounded-t-2xl border-t border-[#374151] px-4 pb-8 pt-2"
+                      className="bg-white rounded-t-2xl border-t border-gray-200 px-4 pb-8 pt-2"
                       onPress={(e) => e.stopPropagation()}
                     >
                       <View className="items-center pt-2 pb-3">
-                        <View className="w-10 h-1 rounded-full bg-[#4B5563]" />
+                        <View className="w-10 h-1 rounded-full bg-gray-300" />
                       </View>
-                      <Text className="text-white text-lg font-semibold mb-4">Select Currency</Text>
+                      <Text className="text-gray-900 text-lg font-semibold mb-4">Select Currency</Text>
                       {CURRENCY_OPTIONS.map((opt) => {
                         const isSelected = formData.currency === opt.code;
                         return (
                           <TouchableOpacity
                             key={opt.code}
-                            className={`flex-row items-center py-3.5 px-4 rounded-xl mb-2 ${isSelected ? 'bg-[#9333EA]/20 border border-[#9333EA]' : 'bg-[#2F2F2F] border border-transparent'}`}
+                            className={`flex-row items-center py-3.5 px-4 rounded-xl mb-2 ${isSelected ? 'bg-primary/10 border border-primary' : 'bg-gray-100 border border-transparent'}`}
                             onPress={() => {
                               handleInputChange('currency', opt.code);
                               setShowCurrencyModal(false);
                             }}
                             activeOpacity={0.8}
                           >
-                            <View className="w-10 h-10 rounded-full bg-[#374151] items-center justify-center mr-3">
+                            <View className="w-10 h-10 rounded-full bg-gray-200 items-center justify-center mr-3">
                               <Text className="text-xl">{opt.flag}</Text>
                             </View>
                             <View className="flex-1">
-                              <Text className="text-white text-base font-medium">{opt.code}</Text>
+                              <Text className="text-gray-900 text-base font-medium">{opt.code}</Text>
                               <Text className="text-[#9CA3AF] text-sm">{opt.label}</Text>
                             </View>
                             {isSelected && (
-                              <View className="w-6 h-6 rounded-full bg-[#9333EA] items-center justify-center">
+                              <View className="w-6 h-6 rounded-full bg-primary items-center justify-center">
                                 <MaterialIcons name="check" size={14} color="#FFF" />
                               </View>
                             )}
@@ -659,7 +659,7 @@ export default function CreateEventScreen() {
 
                 <Text className={labelClass}>Total Tickets</Text>
                 <TextInput
-                  className={`bg-[#1F1F1F] border rounded-2xl py-3.5 px-4 text-white text-base mb-1 ${errors.totalTickets ? 'border-[#EF4444]' : 'border-[#374151]'}`}
+                  className={`bg-gray-50 border rounded-2xl py-3.5 px-4 text-gray-900 text-base mb-1 ${errors.totalTickets ? 'border-[#EF4444]' : 'border-gray-200'}`}
                   placeholder="e.g. 100"
                   placeholderTextColor="#6B7280"
                   value={formData.totalTickets}
@@ -673,7 +673,7 @@ export default function CreateEventScreen() {
             <TouchableOpacity
               onPress={handleSubmit}
               disabled={loading || !step2Valid}
-              className={`w-full py-4 rounded-2xl bg-[#9333EA] items-center justify-center mt-2 ${loading || !step2Valid ? 'opacity-60' : ''}`}
+              className={`w-full py-4 rounded-2xl bg-primary items-center justify-center mt-2 ${loading || !step2Valid ? 'opacity-60' : ''}`}
             >
               {loading ? (
                 <ActivityIndicator color="#FFF" />

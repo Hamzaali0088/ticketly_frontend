@@ -112,7 +112,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ visible, onClose, onScan }
         {/* Camera View */}
         {loading ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color="#9333EA" />
+            <ActivityIndicator size="large" color="#DC2626" />
             <Text className="text-white text-base mt-4">Requesting camera permission...</Text>
           </View>
         ) : hasPermission === false ? (
@@ -125,7 +125,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ visible, onClose, onScan }
               Please enable camera access in your device settings to scan QR codes.
             </Text>
             <TouchableOpacity
-              className="bg-[#9333EA] py-3 px-6 rounded-xl mt-6"
+              className="bg-primary py-3 px-6 rounded-xl mt-6"
               onPress={() => {
                 if (Platform.OS === 'ios') {
                   Linking.openURL('app-settings:');
@@ -162,7 +162,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ visible, onClose, onScan }
                   {/* Middle row with square cutout */}
                   <View className="flex-row" style={{ height: 280 }}>
                     <View className="flex-1 bg-black/60" />
-                    <View style={{ width: 280 }} className="border-2 border-[#9333EA] rounded-2xl">
+                    <View style={{ width: 280 }} className="border-2 border-primary rounded-2xl">
                       {/* Corner indicators */}
                       <View className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-xl" />
                       <View className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-xl" />
@@ -177,7 +177,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ visible, onClose, onScan }
 
                 {/* Scanning indicator */}
                 {!scanned && (
-                  <View className="absolute bottom-[80px] bg-[#9333EA] py-3 px-6 rounded-xl flex-row items-center">
+                  <View className="absolute bottom-[80px] bg-primary py-3 px-6 rounded-xl flex-row items-center">
                     <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
                     <Text className="text-white text-sm font-semibold">Scanning...</Text>
                   </View>

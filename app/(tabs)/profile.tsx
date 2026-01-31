@@ -13,7 +13,10 @@ import { getEventImageUrl, getProfileImageUrl } from '@/lib/utils/imageUtils';
 import {
   ActivityIndicator,
   Image,
+  Modal as RNModal,
+  PanResponder,
   Platform,
+  Pressable,
   RefreshControl,
   ScrollView,
   Text,
@@ -84,6 +87,7 @@ export default function ProfileScreen() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successModalMessage, setSuccessModalMessage] = useState('');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
   const hasLoadedRef = useRef(false);
   const currentUserIdRef = useRef<string | null>(null);
 
@@ -94,6 +98,38 @@ export default function ProfileScreen() {
     ? 90 + insets.bottom // iOS: height includes padding, add safe area
     : 75 + Math.max(insets.bottom, 50) + 10 + insets.bottom; // Android: height + paddingBottom + marginBottom + safe area
   const bottomPadding = tabBarTotalHeight + 20; // Extra 20px for comfortable spacing
+
+  const TAB_ORDER: ('created' | 'joined' | 'liked')[] = ['created', 'joined', 'liked'];
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        const { dx, dy } = gestureState;
+        return Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 35;
+      },
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        const { dx, dy } = gestureState;
+        return Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 35;
+      },
+      onPanResponderTerminationRequest: () => true,
+      onPanResponderRelease: (_, gestureState) => {
+        const { dx } = gestureState;
+        const SWIPE_THRESHOLD = 40;
+        const currentTab = activeTabRef.current;
+        if (dx < -SWIPE_THRESHOLD) {
+          const idx = TAB_ORDER.indexOf(currentTab);
+          if (idx < TAB_ORDER.length - 1) setActiveTab(TAB_ORDER[idx + 1]);
+        } else if (dx > SWIPE_THRESHOLD) {
+          const idx = TAB_ORDER.indexOf(currentTab);
+          if (idx > 0) setActiveTab(TAB_ORDER[idx - 1]);
+        }
+      },
+    })
+  ).current;
 
   // Helper function to get full profile image URL
   const getProfileImageUrl = (): string | null => {
@@ -325,7 +361,14 @@ export default function ProfileScreen() {
       }
     } catch (error: any) {
       console.error('Failed to load profile:', error);
-      setErrorModalMessage(error.response?.data?.message || 'Failed to load profile');
+      const status = error.response?.status;
+      const msg = error.response?.data?.message || '';
+      if (status === 401 || msg.includes('No token provided')) {
+        await logout();
+        router.replace('/login');
+        return;
+      }
+      setErrorModalMessage(msg || 'Failed to load profile');
       setShowErrorModal(true);
     } finally {
       setLoading(false);
@@ -388,9 +431,16 @@ export default function ProfileScreen() {
       }
     } catch (error: any) {
       console.error('Failed to load events:', error);
+      const status = error.response?.status;
+      const msg = error.response?.data?.message || '';
+      if (status === 401 || msg.includes('No token provided')) {
+        await logout();
+        router.replace('/login');
+        return;
+      }
       // Don't show alert if called from loadProfile to avoid double alerts
       if (showLoading) {
-        setErrorModalMessage(error.response?.data?.message || 'Failed to load events');
+        setErrorModalMessage(msg || 'Failed to load events');
         setShowErrorModal(true);
       }
     } finally {
@@ -403,9 +453,9 @@ export default function ProfileScreen() {
   // Show loading only while we check cache (so we don't flash "Login" when user is actually logged in)
   if (!user && !hasCheckedCache) {
     return (
-      <View className="flex-1 bg-[#0F0F0F] pt-[60px] items-center justify-center">
-        <ActivityIndicator size="large" color="#9333EA" />
-        <Text className="text-[#9CA3AF] mt-4">Loading profile...</Text>
+      <View className="flex-1 bg-white pt-[60px] items-center justify-center">
+        <ActivityIndicator size="large" color="#DC2626" />
+        <Text className="text-gray-600 mt-4">Loading profile...</Text>
       </View>
     );
   }
@@ -413,19 +463,19 @@ export default function ProfileScreen() {
   // Show login option if user is not authenticated (after we've checked cache)
   if (!user) {
     return (
-      <View className="flex-1 bg-[#0F0F0F] pt-[60px]">
+      <View className="flex-1 bg-white pt-[60px]">
         <ScrollView
           className="flex-1"
           contentContainerStyle={{ paddingBottom: bottomPadding }}
           showsVerticalScrollIndicator={false}
         >
           <View className="flex-1 items-center justify-center px-10 pt-[100px]">
-            <Text className="text-white text-2xl font-bold mb-4 text-center">Welcome on Ticketly</Text>
-            <Text className="text-[#9CA3AF] text-base mb-8 text-center leading-6">
+            <Text className="text-gray-900 text-2xl font-bold mb-4 text-center">Welcome on Ticketly</Text>
+            <Text className="text-gray-600 text-base mb-8 text-center leading-6">
               Login to create events, register for events, and manage your profile
             </Text>
             <TouchableOpacity
-              className="bg-[#9333EA] py-4 px-8 rounded-xl"
+              className="bg-primary py-4 px-8 rounded-xl"
               onPress={() => router.push('/login')}
             >
               <Text className="text-white text-base font-semibold">Login / Sign Up</Text>
@@ -601,8 +651,7 @@ export default function ProfileScreen() {
           activeOpacity={0.7}
         >
           <Text className="text-[#6B7280] text-sm">
-            {activeTab === 'created' && 'No events created yet'}
-            {activeTab === 'liked' && 'No events liked yet'}
+            {activeTab === 'created' ? 'No events created yet' : 'No events liked yet'}
           </Text>
         </TouchableOpacity>
       );
@@ -624,8 +673,6 @@ export default function ProfileScreen() {
               key={eventId}
               event={event}
               onPress={() => {
-                console.log('📍 Navigating to event details with ID:', eventId);
-                // Navigate to created event details page for created events
                 if (activeTab === 'created') {
                   router.push(`/created-event-details/${eventId}`);
                 } else {
@@ -640,114 +687,129 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View className="flex-1 bg-[#0F0F0F] pt-[60px]">
+    <View className="flex-1 bg-white pt-[60px]" {...panResponder.panHandlers}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: bottomPadding }}
         showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[3]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#9333EA"
-            colors={["#9333EA"]}
+            tintColor="#DC2626"
+            colors={["#DC2626"]}
           />
         }
       >
         {/* Profile Header */}
         <View className="flex-row justify-end items-center px-5 pt-5 pb-2">
           <TouchableOpacity
-            className="bg-[#1F1F1F] w-10 h-10 rounded-lg items-center justify-center"
+            className="bg-gray-100 w-10 h-10 rounded-lg items-center justify-center"
             onPress={() => router.push('/settings')}
           >
-            <MaterialIcons name="menu" size={24} color="#FFFFFF" />
+            <MaterialIcons name="menu" size={24} color="#111827" />
           </TouchableOpacity>
         </View>
 
         {/* Profile Section - Centered */}
-        <View className="items-center py-6 pb-8">
-          <TouchableOpacity
-            onPress={pickImage}
-            disabled={uploadingImage}
-            activeOpacity={0.8}
-            className="relative"
-          >
-            <View className="w-[100px] h-[100px] rounded-full bg-[#9333EA] items-center justify-center mb-4 overflow-hidden">
-              {getProfileImageUrl() ? (
-                <Image
-                  source={{ uri: getProfileImageUrl()! }}
-                  className="w-full h-full"
-                  resizeMode="cover"
-                />
-              ) : (
-                <Text className="text-white text-4xl font-bold">
-                  {user.fullName.charAt(0).toUpperCase()}
-                </Text>
+        <View className="items-center py-6 pb-4">
+          <View className="relative">
+            <TouchableOpacity
+              onPress={() => setShowImageViewer(true)}
+              activeOpacity={0.8}
+              disabled={uploadingImage}
+              className="w-[100px] h-[100px] rounded-full overflow-hidden"
+            >
+              <View className="w-full h-full rounded-full bg-primary items-center justify-center overflow-hidden">
+                {getProfileImageUrl() ? (
+                  <Image
+                    source={{ uri: getProfileImageUrl()! }}
+                    className="w-full h-full"
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text className="text-white text-4xl font-bold">
+                    {user.fullName.charAt(0).toUpperCase()}
+                  </Text>
+                )}
+              </View>
+              {uploadingImage && (
+                <View className="absolute inset-0 bg-black/50 rounded-full items-center justify-center">
+                  <ActivityIndicator size="small" color="#DC2626" />
+                </View>
               )}
-            </View>
-            {uploadingImage && (
-              <View className="absolute inset-0 bg-black/50 rounded-full items-center justify-center">
-                <ActivityIndicator size="small" color="#9333EA" />
-              </View>
-            )}
-            {!uploadingImage && (
-              <View className="absolute bottom-0 right-0 bg-[#9333EA] w-8 h-8 rounded-full items-center justify-center border-2 border-[#0F0F0F]">
-                <MaterialIcons name="camera-alt" size={16} color="#FFFFFF" />
-              </View>
-            )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={pickImage}
+              disabled={uploadingImage}
+              activeOpacity={0.8}
+              className="absolute bottom-0 right-0 bg-primary w-8 h-8 rounded-full items-center justify-center border-2 border-white"
+            >
+              <MaterialIcons name="camera-alt" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            className="flex-row items-center gap-2 mb-1"
+            onPress={() => router.push('/settings')}
+            activeOpacity={0.7}
+          >
+            <Text className="text-gray-900 text-2xl font-bold">{user.fullName}</Text>
+            <MaterialIcons name="edit" size={20} color="#DC2626" />
           </TouchableOpacity>
-          <Text className="text-white text-2xl font-bold mb-1">{user.fullName}</Text>
           {user.companyName && (
-            <Text className="text-[#9333EA] text-base font-semibold mt-1">{user.companyName}</Text>
+            <Text className="text-primary text-base font-semibold mt-1">{user.companyName}</Text>
           )}
         </View>
 
         {/* Stats */}
-        <View className="flex-row justify-around px-5 pb-6">
+        <View className="flex-row justify-around px-5 py-2">
           <View className="items-center">
-            <Text className="text-white text-2xl font-bold mb-1">{createdEvents.length}</Text>
-            <Text className="text-[#9CA3AF] text-xs">Created</Text>
+            <Text className="text-gray-900 text-base font-bold mb-0.5">{createdEvents.length}</Text>
+            <Text className="text-[#9CA3AF] text-[10px]">Created</Text>
           </View>
           <View className="items-center">
-            <Text className="text-white text-2xl font-bold mb-1">{joinedEventsData.length}</Text>
-            <Text className="text-[#9CA3AF] text-xs">Joined</Text>
+            <Text className="text-gray-900 text-base font-bold mb-0.5">{joinedEventsData.length}</Text>
+            <Text className="text-[#9CA3AF] text-[10px]">Joined</Text>
           </View>
           <View className="items-center">
-            <Text className="text-white text-2xl font-bold mb-1">{likedEvents.length}</Text>
-            <Text className="text-[#9CA3AF] text-xs">Liked</Text>
+            <Text className="text-gray-900 text-base font-bold mb-0.5">{likedEvents.length}</Text>
+            <Text className="text-[#9CA3AF] text-[10px]">Liked</Text>
           </View>
         </View>
 
-        {/* Tabs */}
-        <View className="flex-row px-5 mb-5 gap-2">
+        {/* Tabs - sticky when scrolling */}
+        <View className="flex-row px-5 py-2 mb-3 translate-y-[-2px] gap-2 bg-white">
           <TouchableOpacity
-            className={`flex-1 py-2.5 items-center rounded-lg ${activeTab === 'created' ? 'bg-[#9333EA]' : 'bg-[#1F1F1F]'}`}
+            className={`flex-1 py-2 items-center rounded-md ${activeTab === 'created' ? 'bg-primary' : 'bg-gray-100'}`}
             onPress={() => setActiveTab('created')}
           >
-            <Text className={`text-xs font-semibold ${activeTab === 'created' ? 'text-white' : 'text-[#9CA3AF]'}`}>
+            <Text className={`text-[10px] font-semibold ${activeTab === 'created' ? 'text-white' : 'text-[#9CA3AF]'}`}>
               Created Events
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className={`flex-1 py-2.5 items-center rounded-lg ${activeTab === 'joined' ? 'bg-[#9333EA]' : 'bg-[#1F1F1F]'}`}
+            className={`flex-1 py-2 items-center rounded-md ${activeTab === 'joined' ? 'bg-primary' : 'bg-gray-100'}`}
             onPress={() => setActiveTab('joined')}
           >
-            <Text className={`text-xs font-semibold ${activeTab === 'joined' ? 'text-white' : 'text-[#9CA3AF]'}`}>
+            <Text className={`text-[10px] font-semibold ${activeTab === 'joined' ? 'text-white' : 'text-[#9CA3AF]'}`}>
               Joined Events
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className={`flex-1 py-2.5 items-center rounded-lg ${activeTab === 'liked' ? 'bg-[#9333EA]' : 'bg-[#1F1F1F]'}`}
+            className={`flex-1 py-2 items-center rounded-md ${activeTab === 'liked' ? 'bg-primary' : 'bg-gray-100'}`}
             onPress={() => setActiveTab('liked')}
           >
-            <Text className={`text-xs font-semibold ${activeTab === 'liked' ? 'text-white' : 'text-[#9CA3AF]'}`}>
+            <Text className={`text-[10px] font-semibold ${activeTab === 'liked' ? 'text-white' : 'text-[#9CA3AF]'}`}>
               Liked Events
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Events List */}
-        <View className="px-5 mb-8">{renderEvents()}</View>
+        {/* Events List - swipe area for tab change */}
+        <View className="px-5 mb-8">
+          {renderEvents()}
+        </View>
       </ScrollView>
 
       <Modal
@@ -787,6 +849,40 @@ export default function ProfileScreen() {
         onPrimaryPress={confirmLogout}
         variant="info"
       />
+
+      {/* Profile Image Viewer */}
+      <RNModal
+        visible={showImageViewer}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowImageViewer(false)}
+      >
+        <Pressable
+          className="flex-1 bg-black justify-center items-center"
+          onPress={() => setShowImageViewer(false)}
+        >
+          <View className="w-[320px] h-[320px] rounded-full overflow-hidden items-center justify-center bg-primary">
+            {getProfileImageUrl() ? (
+              <Image
+                source={{ uri: getProfileImageUrl()! }}
+                className="w-full h-full"
+                resizeMode="cover"
+              />
+            ) : (
+              <Text className="text-white text-8xl font-bold">
+                {user?.fullName?.charAt(0)?.toUpperCase() || '?'}
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity
+            className="absolute right-4 bg-white/20 w-10 h-10 rounded-full items-center justify-center"
+            style={{ top: insets.top + 8 }}
+            onPress={() => setShowImageViewer(false)}
+          >
+            <MaterialIcons name="close" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </Pressable>
+      </RNModal>
     </View>
   );
 }

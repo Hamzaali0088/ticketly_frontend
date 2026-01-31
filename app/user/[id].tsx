@@ -7,6 +7,9 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
+  Platform,
+  Modal as RNModal,
+  Pressable,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,7 +20,6 @@ import { EventCard } from '@/components/EventCard';
 
 type TabKey = 'created' | 'joined' | 'liked';
 
-// Convert API event to EventCard format (same shape as profile/explore)
 function convertEvent(apiEvent: any) {
   const eventId = apiEvent._id || apiEvent.id || (apiEvent as any)?._id || (apiEvent as any)?.id;
   const dateStr = apiEvent.date
@@ -57,7 +59,6 @@ function convertEvent(apiEvent: any) {
   };
 }
 
-
 export default function UserProfileScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -67,6 +68,10 @@ export default function UserProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>('created');
+  const [showImageViewer, setShowImageViewer] = useState(false);
+
+  const tabBarTotalHeight = Platform.OS === 'ios' ? 90 + insets.bottom : 75 + Math.max(insets.bottom, 50) + 10 + insets.bottom;
+  const bottomPadding = tabBarTotalHeight + 20;
 
   const fetchProfile = useCallback(
     async (showRefreshing = false) => {
@@ -108,18 +113,19 @@ export default function UserProfileScreen() {
     .map((item: any) => (item?.event ? convertEvent(item.event) : null))
     .filter(Boolean);
   const likedEvents = (profile?.likedEvents || []).map(convertEvent);
+  const showLikedTab = (profile?.likedEventsVisibility ?? 'public') === 'public';
 
   const currentEvents =
     activeTab === 'created' ? createdEvents : activeTab === 'joined' ? joinedEvents : likedEvents;
 
-  const safeTop = 50 + insets.top;
+  const profileImageUrl = profile ? (getProfileImageUrl(profile) || undefined) : undefined;
 
   if (loading && !profile) {
     return (
-      <View className="flex-1 bg-[#0F0F0F]">
+      <View className="flex-1 bg-white">
         <View className="flex-1 items-center justify-center p-10">
-          <ActivityIndicator size="large" color="#9333EA" />
-          <Text className="text-white text-base mt-4">Loading profile...</Text>
+          <ActivityIndicator size="large" color="#DC2626" />
+          <Text className="text-gray-700 text-base mt-4">Loading profile...</Text>
         </View>
       </View>
     );
@@ -127,11 +133,11 @@ export default function UserProfileScreen() {
 
   if (error || !profile) {
     return (
-      <View className="flex-1 bg-[#0F0F0F]">
+      <View className="flex-1 bg-white">
         <View className="flex-1 items-center justify-center p-10">
           <Text className="text-[#EF4444] text-lg mb-6">{error || 'User not found'}</Text>
           <TouchableOpacity
-            className="bg-[#9333EA] py-3 px-6 rounded-xl"
+            className="bg-primary py-3 px-6 rounded-xl"
             onPress={() => router.back()}
           >
             <Text className="text-white text-base font-semibold">Go Back</Text>
@@ -141,84 +147,118 @@ export default function UserProfileScreen() {
     );
   }
 
-  const profileImageUri = getProfileImageUrl(profile) || undefined;
-
   return (
-    <View className="flex-1 bg-[#0F0F0F]">
+    <View className="flex-1 bg-white pt-[60px]">
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: bottomPadding }}
         showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[3]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#9333EA"
-            colors={['#9333EA']}
+            tintColor="#DC2626"
+            colors={['#DC2626']}
           />
         }
       >
-        {/* Profile image header (same style as event-details thumbnail) */}
-        <View className="w-full h-[300px] relative bg-[#1F1F1F]">
-          <Image
-            source={{
-              uri: profileImageUri || 'https://via.placeholder.com/400?text=No+Photo',
-            }}
-            className="w-full h-full"
-            resizeMode="cover"
-          />
+        {/* Header - Back button */}
+        <View className="flex-row justify-end items-center px-5 pt-5 pb-2">
           <TouchableOpacity
-            className="absolute bg-black/50 w-10 h-10 rounded-full items-center justify-center"
-            style={{ top: safeTop, left: 20 }}
+            className="bg-gray-100 w-10 h-10 rounded-lg items-center justify-center"
             onPress={() => router.back()}
           >
-            <MaterialIcons name="arrow-back" size={20} color="#FFFFFF" />
+            <MaterialIcons name="arrow-back" size={24} color="#111827" />
           </TouchableOpacity>
         </View>
 
-        {/* Details card (same style as event-details info card) */}
-        <View className="bg-[#1F1F1F] rounded-t-3xl p-5 -mt-5">
-          <Text className="text-white text-2xl font-bold mb-1">{profile.fullName}</Text>
-          {profile.companyName ? (
-            <Text className="text-[#9333EA] text-base font-semibold mb-6">{profile.companyName}</Text>
-          ) : (
-            <View className="mb-6" />
+        {/* Profile Section - Centered (similar to profile page) */}
+        <View className="items-center py-6 pb-4">
+          <TouchableOpacity
+            onPress={() => setShowImageViewer(true)}
+            activeOpacity={0.8}
+            className="relative"
+          >
+            <View className="w-[100px] h-[100px] rounded-full overflow-hidden">
+              <View className="w-full h-full rounded-full bg-primary items-center justify-center overflow-hidden">
+                {profileImageUrl ? (
+                  <Image
+                    source={{ uri: profileImageUrl }}
+                    className="w-full h-full"
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text className="text-white text-4xl font-bold">
+                    {(profile.fullName || profile.username || '?').charAt(0).toUpperCase()}
+                  </Text>
+                )}
+              </View>
+            </View>
+          </TouchableOpacity>
+          <Text className="text-gray-900 text-2xl font-bold mb-1">
+            {profile.fullName || profile.username || 'User'}
+          </Text>
+          {profile.username && (
+            <Text className="text-gray-500 text-sm">@{profile.username}</Text>
           )}
+          {profile.companyName && (
+            <Text className="text-primary text-base font-semibold mt-1">{profile.companyName}</Text>
+          )}
+        </View>
 
-          {/* Stats row */}
-          <View className="flex-row justify-around py-4 border-t border-b border-[#2D2D2D] mb-6">
-            <View className="items-center">
-              <Text className="text-white text-2xl font-bold">{createdEvents.length}</Text>
-              <Text className="text-[#9CA3AF] text-xs">Created</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-white text-2xl font-bold">{joinedEvents.length}</Text>
-              <Text className="text-[#9CA3AF] text-xs">Joined</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-white text-2xl font-bold">{likedEvents.length}</Text>
-              <Text className="text-[#9CA3AF] text-xs">Liked</Text>
-            </View>
+        {/* Stats (compact, like profile page) */}
+        <View className="flex-row justify-around px-5 py-2">
+          <View className="items-center">
+            <Text className="text-gray-900 text-base font-bold mb-0.5">{createdEvents.length}</Text>
+            <Text className="text-[#9CA3AF] text-[10px]">Created</Text>
           </View>
-
-          {/* Tabs */}
-          <View className="flex-row mb-5 gap-2">
-            {(['created', 'joined', 'liked'] as const).map((tab) => (
-              <TouchableOpacity
-                key={tab}
-                onPress={() => setActiveTab(tab)}
-                className={`flex-1 py-2.5 rounded-lg items-center ${activeTab === tab ? 'bg-[#9333EA]' : 'bg-[#2D2D2D]'}`}
-              >
-                <Text
-                  className={`text-xs font-semibold ${activeTab === tab ? 'text-white' : 'text-[#9CA3AF]'}`}
-                >
-                  {tab === 'created' ? 'Created' : tab === 'joined' ? 'Joined' : 'Liked'}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View className="items-center">
+            <Text className="text-gray-900 text-base font-bold mb-0.5">{joinedEvents.length}</Text>
+            <Text className="text-[#9CA3AF] text-[10px]">Joined</Text>
           </View>
+          <View className="items-center">
+            <Text className="text-gray-900 text-base font-bold mb-0.5">{likedEvents.length}</Text>
+            <Text className="text-[#9CA3AF] text-[10px]">Liked</Text>
+          </View>
+        </View>
 
-          {/* Event list */}
+        {/* Tabs */}
+        <View className="flex-row px-5 py-2 mb-3 gap-2 bg-white">
+          <TouchableOpacity
+            className={`flex-1 py-2 items-center rounded-md ${activeTab === 'created' ? 'bg-primary' : 'bg-gray-100'}`}
+            onPress={() => setActiveTab('created')}
+          >
+            <Text className={`text-[10px] font-semibold ${activeTab === 'created' ? 'text-white' : 'text-[#9CA3AF]'}`}>
+              Created Events
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className={`flex-1 py-2 items-center rounded-md ${activeTab === 'joined' ? 'bg-primary' : 'bg-gray-100'}`}
+            onPress={() => setActiveTab('joined')}
+          >
+            <Text className={`text-[10px] font-semibold ${activeTab === 'joined' ? 'text-white' : 'text-[#9CA3AF]'}`}>
+              Joined Events
+            </Text>
+          </TouchableOpacity>
+          {showLikedTab ? (
+            <TouchableOpacity
+              className={`flex-1 py-2 items-center rounded-md ${activeTab === 'liked' ? 'bg-primary' : 'bg-gray-100'}`}
+              onPress={() => setActiveTab('liked')}
+            >
+              <Text className={`text-[10px] font-semibold ${activeTab === 'liked' ? 'text-white' : 'text-[#9CA3AF]'}`}>
+                Liked Events
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View className="flex-1 py-2 items-center rounded-md bg-gray-100 opacity-60">
+              <Text className="text-[#9CA3AF] text-[10px] font-semibold">Liked (Private)</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Events List */}
+        <View className="px-5 mb-8">
           {currentEvents.length === 0 ? (
             <View className="py-10 items-center">
               <MaterialIcons name="event-busy" size={48} color="#4B5563" />
@@ -239,6 +279,40 @@ export default function UserProfileScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Profile Image Viewer (same as profile page) */}
+      <RNModal
+        visible={showImageViewer}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowImageViewer(false)}
+      >
+        <Pressable
+          className="flex-1 bg-black justify-center items-center"
+          onPress={() => setShowImageViewer(false)}
+        >
+          <View className="w-[320px] h-[320px] rounded-full overflow-hidden items-center justify-center bg-primary">
+            {profileImageUrl ? (
+              <Image
+                source={{ uri: profileImageUrl }}
+                className="w-full h-full"
+                resizeMode="cover"
+              />
+            ) : (
+              <Text className="text-white text-8xl font-bold">
+                {(profile?.fullName || profile?.username || '?').charAt(0).toUpperCase()}
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity
+            className="absolute right-4 bg-white/20 w-10 h-10 rounded-full items-center justify-center"
+            style={{ top: insets.top + 8 }}
+            onPress={() => setShowImageViewer(false)}
+          >
+            <MaterialIcons name="close" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </Pressable>
+      </RNModal>
     </View>
   );
 }

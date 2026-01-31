@@ -308,23 +308,35 @@ export default function LoginScreen() {
     }
   };
 
+  const cardStyle = {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 } as const,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+  };
+
   // Signup Form
   if (mode === 'signup' && loginMethod === 'email' && !otpSent) {
     return (
       <KeyboardAvoidingView
-        className="flex-1 bg-[#0F0F0F]"
+        className="flex-1 bg-gray-100"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: 'center', alignItems: 'center' }}>
-          <View className="items-center mb-12">
-            <Text className="text-4xl font-bold text-white mb-4">ticketly</Text>
-            <Text className="text-base text-[#9CA3AF] text-center">Create your account</Text>
-          </View>
+          <View
+            className="w-full max-w-md bg-white rounded-2xl p-8"
+            style={cardStyle}
+          >
+            <View className="items-center mb-8">
+              <Text className="text-4xl font-bold text-gray-900 mb-2">ticketly</Text>
+              <Text className="text-base text-gray-600 text-center">Create your account</Text>
+            </View>
 
-          <View className="w-full">
-            <Text className="text-white text-sm font-semibold mb-2">Full Name</Text>
+            <View className="w-full">
+            <Text className="text-gray-900 text-sm font-semibold mb-2">Full Name</Text>
             <TextInput
-              className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 text-white text-base mb-2"
+              className="bg-gray-50 border border-gray-200 rounded-xl py-3.5 px-4 text-gray-900 text-base mb-2"
               placeholder="e.g. Fatima Ali"
               placeholderTextColor="#6B7280"
               value={name}
@@ -332,9 +344,9 @@ export default function LoginScreen() {
               autoCapitalize="words"
             />
 
-            <Text className="text-white text-sm font-semibold mb-2">Email</Text>
+            <Text className="text-gray-900 text-sm font-semibold mb-2">Email</Text>
             <TextInput
-              className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 text-white text-base mb-2 ${errorMessage ? 'border-[#EF4444]' : 'border-[#374151]'}`}
+              className={`bg-gray-50 border rounded-xl py-3.5 px-4 text-gray-900 text-base mb-2 ${errorMessage ? 'border-[#EF4444]' : 'border-gray-200'}`}
               placeholder="e.g. fatimaali@gmail.com"
               placeholderTextColor="#6B7280"
               value={email}
@@ -351,10 +363,10 @@ export default function LoginScreen() {
               <Text className="text-[#EF4444] text-xs mb-3 mt-[-4px] px-1">{errorMessage}</Text>
             )}
 
-            <Text className="text-white text-sm font-semibold mb-2">Password</Text>
+            <Text className="text-gray-900 text-sm font-semibold mb-2">Password</Text>
             <View className="relative mb-2">
               <TextInput
-                className="bg-[#1F1F1F] border border-[#374151] rounded-xl py-3.5 px-4 pr-12 text-white text-base"
+                className="bg-gray-50 border border-gray-200 rounded-xl py-3.5 px-4 pr-12 text-gray-900 text-base"
                 placeholder="At least 8 characters"
                 placeholderTextColor="#6B7280"
                 value={password}
@@ -375,7 +387,7 @@ export default function LoginScreen() {
             </View>
 
             <TouchableOpacity
-              className={`bg-[#9333EA] py-4 rounded-xl items-center mb-3 ${loading ? 'opacity-60' : ''}`}
+              className={`bg-primary py-4 rounded-xl items-center mb-3 ${loading ? 'opacity-60' : ''}`}
               onPress={handleSignup}
               disabled={loading}
             >
@@ -396,11 +408,11 @@ export default function LoginScreen() {
                 setErrorMessage('');
               }}
             >
-              <Text className="text-[#9333EA] text-sm font-semibold">Already have an account? Login</Text>
+              <Text className="text-primary text-sm font-semibold">Already have an account? Login</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="bg-[#1F1F1F] border border-[#374151] py-4 rounded-xl items-center"
+              className="bg-gray-50 border border-gray-200 py-4 rounded-xl items-center"
               onPress={() => {
                 setLoginMethod(null);
                 setName('');
@@ -409,8 +421,9 @@ export default function LoginScreen() {
                 setErrorMessage('');
               }}
             >
-              <Text className="text-white text-base font-semibold">Back</Text>
+              <Text className="text-gray-900 text-base font-semibold">Back</Text>
             </TouchableOpacity>
+          </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -421,19 +434,23 @@ export default function LoginScreen() {
   if (mode === 'login' && loginMethod === 'email' && !otpSent) {
     return (
       <KeyboardAvoidingView
-        className="flex-1 bg-[#0F0F0F]"
+        className="flex-1 bg-gray-100"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: 'center', alignItems: 'center' }}>
-          <View className="items-center mb-12">
-            <Text className="text-4xl font-bold text-white mb-4">ticketly</Text>
-            <Text className="text-base text-[#9CA3AF] text-center">Login to your account</Text>
-          </View>
+          <View
+            className="w-full max-w-md bg-white rounded-2xl p-8"
+            style={cardStyle}
+          >
+            <View className="items-center mb-8">
+              <Text className="text-4xl font-bold text-gray-900 mb-2">ticketly</Text>
+              <Text className="text-base text-gray-600 text-center">Login to your account</Text>
+            </View>
 
-          <View className="w-full">
-            <Text className="text-white text-sm font-semibold mb-2">Email</Text>
+            <View className="w-full">
+            <Text className="text-gray-900 text-sm font-semibold mb-2">Email</Text>
             <TextInput
-              className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 text-white text-base mb-2 ${loginError ? 'border-[#EF4444]' : 'border-[#374151]'}`}
+              className={`bg-gray-50 border rounded-xl py-3.5 px-4 text-gray-900 text-base mb-2 ${loginError ? 'border-[#EF4444]' : 'border-gray-200'}`}
               placeholder="e.g. fatimaali@gmail.com"
               placeholderTextColor="#6B7280"
               value={email}
@@ -447,10 +464,10 @@ export default function LoginScreen() {
               autoComplete="email"
             />
 
-            <Text className="text-white text-sm font-semibold mb-2">Password</Text>
+            <Text className="text-gray-900 text-sm font-semibold mb-2">Password</Text>
             <View className="relative mb-2">
               <TextInput
-                className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 pr-12 text-white text-base ${loginError ? 'border-[#EF4444]' : 'border-[#374151]'}`}
+                className={`bg-gray-50 border rounded-xl py-3.5 px-4 pr-12 text-gray-900 text-base ${loginError ? 'border-[#EF4444]' : 'border-gray-200'}`}
                 placeholder="Enter your password"
                 placeholderTextColor="#6B7280"
                 value={password}
@@ -478,7 +495,7 @@ export default function LoginScreen() {
             )}
 
             <TouchableOpacity
-              className={`bg-[#9333EA] py-4 rounded-xl items-center mb-3 ${loading ? 'opacity-60' : ''}`}
+              className={`bg-primary py-4 rounded-xl items-center mb-3 ${loading ? 'opacity-60' : ''}`}
               onPress={handleEmailSubmit}
               disabled={loading}
             >
@@ -498,11 +515,11 @@ export default function LoginScreen() {
                 setLoginError('');
               }}
             >
-              <Text className="text-[#9333EA] text-sm font-semibold">Don't have an account? Sign Up</Text>
+              <Text className="text-primary text-sm font-semibold">Don&apos;t have an account? Sign Up</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="bg-[#1F1F1F] border border-[#374151] py-4 rounded-xl items-center"
+              className="bg-gray-50 border border-gray-200 py-4 rounded-xl items-center"
               onPress={() => {
                 setLoginMethod(null);
                 setEmail('');
@@ -510,8 +527,9 @@ export default function LoginScreen() {
                 setLoginError('');
               }}
             >
-              <Text className="text-white text-base font-semibold">Back</Text>
+              <Text className="text-gray-900 text-base font-semibold">Back</Text>
             </TouchableOpacity>
+          </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -521,21 +539,25 @@ export default function LoginScreen() {
   if (loginMethod === 'email' && otpSent) {
     return (
       <KeyboardAvoidingView
-        className="flex-1 bg-[#0F0F0F]"
+        className="flex-1 bg-gray-100"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: 'center', alignItems: 'center' }}>
-          <View className="items-center mb-12">
-            <Text className="text-4xl font-bold text-white mb-4">ticketly</Text>
-            <Text className="text-base text-[#9CA3AF] text-center">
-              {email ? `Enter the OTP sent to ${email}` : 'Enter the OTP sent to your email'}
-            </Text>
-          </View>
+          <View
+            className="w-full max-w-md bg-white rounded-2xl p-8"
+            style={cardStyle}
+          >
+            <View className="items-center mb-8">
+              <Text className="text-4xl font-bold text-gray-900 mb-2">ticketly</Text>
+              <Text className="text-base text-gray-600 text-center">
+                {email ? `Enter the OTP sent to ${email}` : 'Enter the OTP sent to your email'}
+              </Text>
+            </View>
 
-          <View className="w-full">
-            <Text className="text-white text-sm font-semibold mb-2">OTP</Text>
+            <View className="w-full">
+            <Text className="text-gray-900 text-sm font-semibold mb-2">OTP</Text>
             <TextInput
-              className={`bg-[#1F1F1F] border rounded-xl py-3.5 px-4 text-white text-base mb-2 ${otpError ? 'border-[#EF4444]' : 'border-[#374151]'}`}
+              className={`bg-gray-50 border rounded-xl py-3.5 px-4 text-gray-900 text-base mb-2 ${otpError ? 'border-[#EF4444]' : 'border-gray-200'}`}
               placeholder="Enter 6-digit OTP"
               placeholderTextColor="#6B7280"
               value={otp}
@@ -552,7 +574,7 @@ export default function LoginScreen() {
             )}
 
             <TouchableOpacity
-              className={`bg-[#9333EA] py-4 rounded-xl items-center mb-3 ${loading ? 'opacity-60' : ''}`}
+              className={`bg-primary py-4 rounded-xl items-center mb-3 ${loading ? 'opacity-60' : ''}`}
               onPress={handleOTPSubmit}
               disabled={loading}
             >
@@ -571,11 +593,11 @@ export default function LoginScreen() {
                 setOtpError('');
               }}
             >
-              <Text className="text-[#9333EA] text-sm font-semibold">Resend OTP</Text>
+              <Text className="text-primary text-sm font-semibold">Resend OTP</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="bg-[#1F1F1F] border border-[#374151] py-4 rounded-xl items-center"
+              className="bg-gray-50 border border-gray-200 py-4 rounded-xl items-center"
               onPress={() => {
                 setLoginMethod(null);
                 setOtpSent(false);
@@ -587,8 +609,9 @@ export default function LoginScreen() {
                 setOtpError('');
               }}
             >
-              <Text className="text-white text-base font-semibold">Back</Text>
+              <Text className="text-gray-900 text-base font-semibold">Back</Text>
             </TouchableOpacity>
+          </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -596,56 +619,69 @@ export default function LoginScreen() {
   }
 
   return (
-    <View className="flex-1 bg-[#0F0F0F]">
+    <View className="flex-1 bg-gray-100">
       <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: 'center', alignItems: 'center' }}>
-        <View className="items-center mb-12">
-          <Text className="text-4xl font-bold text-white mb-4">ticketly</Text>
-          <Text className="text-base text-[#9CA3AF] text-center">Login via google account to proceed.</Text>
+        <View
+          className="w-full max-w-md bg-white rounded-2xl p-8"
+          style={cardStyle}
+        >
+          <View className="items-center mb-8">
+            <Text className="text-4xl font-bold text-gray-900 mb-2">ticketly</Text>
+            <Text className="text-base text-gray-600 text-center">Login via google account to proceed.</Text>
+          </View>
+
+          <View className="gap-4 mb-8">
+            <TouchableOpacity
+              className="bg-white border border-gray-200 flex-row items-center justify-center py-4 px-6 rounded-xl"
+              onPress={handleGoogleLogin}
+              activeOpacity={0.8}
+            >
+              <Text className="text-2xl font-bold text-[#4285F4] mr-3">G</Text>
+              <Text className="text-[#1F1F1F] text-base font-semibold">Sign in with Google</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className="bg-gray-50 border border-gray-200 py-4 px-6 rounded-xl"
+              onPress={() => {
+                setLoginMethod('email');
+                setMode('login');
+              }}
+              activeOpacity={0.8}
+            >
+              <Text className="text-gray-900 text-base font-semibold text-center">Login with Email</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className="bg-primary py-4 px-6 rounded-xl"
+              onPress={() => {
+                setLoginMethod('email');
+                setMode('signup');
+              }}
+              activeOpacity={0.8}
+            >
+              <Text className="text-white text-base font-semibold text-center">Sign Up with Email</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View className="border-t border-gray-100 pt-6">
+            <View className="flex-row justify-center gap-6 mb-4">
+              <Text className="text-[#9CA3AF] text-sm">Contact Us</Text>
+              <Text className="text-[#9CA3AF] text-sm">Privacy Policy</Text>
+              <Text className="text-[#9CA3AF] text-sm">Terms of Service</Text>
+            </View>
+
+            <View className="flex-row justify-center gap-3 mb-4">
+              <TouchableOpacity className="bg-gray-100 w-10 h-10 rounded-lg items-center justify-center">
+                <Text className="text-gray-900 text-base">in</Text>
+              </TouchableOpacity>
+              <TouchableOpacity className="bg-gray-100 w-10 h-10 rounded-lg items-center justify-center">
+                <Text className="text-gray-900 text-base">📷</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text className="text-[#6B7280] text-xs text-center">2025 Ticketly. All rights reserved.</Text>
+          </View>
         </View>
-
-        <View className="w-full mb-12 gap-4">
-          <TouchableOpacity className="bg-white flex-row items-center justify-center py-4 px-6 rounded-xl mb-4" onPress={handleGoogleLogin}>
-            <Text className="text-2xl font-bold text-[#4285F4] mr-3">G</Text>
-            <Text className="text-[#1F1F1F] text-base font-semibold">Sign in with Google</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="bg-[#1F1F1F] border border-[#374151] py-4 px-6 rounded-xl"
-            onPress={() => {
-              setLoginMethod('email');
-              setMode('login');
-            }}
-          >
-            <Text className="text-white text-base font-semibold text-center">Login with Email</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="bg-[#9333EA] py-4 px-6 rounded-xl"
-            onPress={() => {
-              setLoginMethod('email');
-              setMode('signup');
-            }}
-          >
-            <Text className="text-white text-base font-semibold text-center">Sign Up with Email</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View className="flex-row gap-4 mb-6">
-          <Text className="text-[#9CA3AF] text-sm">Contact Us</Text>
-          <Text className="text-[#9CA3AF] text-sm">Privacy Policy</Text>
-          <Text className="text-[#9CA3AF] text-sm">Terms of Service</Text>
-        </View>
-
-        <View className="flex-row gap-3 mb-6">
-          <TouchableOpacity className="bg-[#1F1F1F] w-10 h-10 rounded-lg items-center justify-center">
-            <Text className="text-white text-base">in</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="bg-[#1F1F1F] w-10 h-10 rounded-lg items-center justify-center">
-            <Text className="text-white text-base">📷</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text className="text-[#6B7280] text-xs text-center">2025 Ticketly. All rights reserved.</Text>
       </ScrollView>
 
       <Modal

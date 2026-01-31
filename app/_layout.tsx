@@ -16,6 +16,8 @@ try {
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
+const BRAND_PRIMARY = '#DC2626'; // red (primary)
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded, fontError] = useFonts({
@@ -41,16 +43,21 @@ export default function RootLayout() {
   if (!appReady) {
     // Show loading screen while app initializes
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F0F0F' }}>
-        <ActivityIndicator size="large" color="#9333EA" />
-        <Text style={{ color: '#FFFFFF', marginTop: 16 }}>Loading...</Text>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
+        <ActivityIndicator size="large" color={BRAND_PRIMARY} />
+        <Text style={{ color: '#111827', marginTop: 16 }}>Loading...</Text>
       </View>
     );
   }
 
+  const navigationTheme =
+    colorScheme === 'dark'
+      ? { ...DarkTheme, colors: { ...DarkTheme.colors, primary: BRAND_PRIMARY } }
+      : { ...DefaultTheme, colors: { ...DefaultTheme.colors, primary: BRAND_PRIMARY } };
+
   return (
     <ErrorBoundary>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <ThemeProvider value={navigationTheme}>
         <Stack screenOptions={{ headerShown: false }} initialRouteName="(tabs)">
           <Stack.Screen name="index" />
           <Stack.Screen name="(tabs)" />
@@ -58,10 +65,11 @@ export default function RootLayout() {
           <Stack.Screen name="settings" />
           <Stack.Screen name="create-event" />
           <Stack.Screen name="event-details/[id]" />
+          <Stack.Screen name="user/[id]" />
           <Stack.Screen name="ticket/[id]" />
           <Stack.Screen name="+not-found" />
         </Stack>
-        <StatusBar style="light" />
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       </ThemeProvider>
     </ErrorBoundary>
   );

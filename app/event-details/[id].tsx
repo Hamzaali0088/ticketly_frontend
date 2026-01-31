@@ -25,7 +25,6 @@ export default function EventDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useAppStore((state) => state.user);
   const setUser = useAppStore((state) => state.setUser);
-  const toggleEventLike = useAppStore((state) => state.toggleEventLike);
   const registerForEvent = useAppStore((state) => state.registerForEvent);
 
   const [event, setEvent] = useState<Event | null>(null);
@@ -33,6 +32,7 @@ export default function EventDetailsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
   const [isRegistered, setIsRegistered] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
@@ -75,6 +75,8 @@ export default function EventDetailsScreen() {
           _id: eventData.id || eventData._id,
         };
         setEvent(transformedEvent);
+        setIsLiked(!!eventData.isLiked);
+        setLikeCount(eventData.likeCount ?? 0);
       } else {
         setError('Event not found');
       }
@@ -140,10 +142,10 @@ export default function EventDetailsScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-[#0F0F0F]">
+      <View className="flex-1 bg-white">
         <View className="flex-1 items-center justify-center p-10">
-          <ActivityIndicator size="large" color="#9333EA" />
-          <Text className="text-white text-base mt-4">Loading event...</Text>
+          <ActivityIndicator size="large" color="#DC2626" />
+          <Text className="text-gray-700 text-base mt-4">Loading event...</Text>
         </View>
       </View>
     );
@@ -151,11 +153,11 @@ export default function EventDetailsScreen() {
 
   if (error || !event) {
     return (
-      <View className="flex-1 bg-[#0F0F0F]">
+      <View className="flex-1 bg-white">
         <View className="flex-1 items-center justify-center p-10">
           <Text className="text-[#EF4444] text-lg mb-6">{error || 'Event not found'}</Text>
           <TouchableOpacity
-            className="bg-[#9333EA] py-3 px-6 rounded-xl"
+            className="bg-primary py-3 px-6 rounded-xl"
             onPress={() => router.back()}
           >
             <Text className="text-white text-base font-semibold">Go Back</Text>
@@ -165,18 +167,36 @@ export default function EventDetailsScreen() {
     );
   }
 
-  const handleLike = () => {
+  const handleLike = async () => {
     const isAuthenticated = useAppStore.getState().isAuthenticated;
     if (!isAuthenticated) {
       setLoginModalMessage('Please login to like events.');
       setShowLoginModal(true);
       return;
     }
-    if (user && event) {
-      const eventId = event._id || (event as any).id;
-      const userId = (user as any)._id || user.id;
-      toggleEventLike(eventId, userId);
-      setIsLiked(!isLiked);
+    if (!event) return;
+    const eventId = event._id || (event as any).id;
+    try {
+      if (isLiked) {
+        const res = await eventsAPI.unlikeEvent(eventId);
+        if (res.success) {
+          setIsLiked(false);
+          setLikeCount(res.likeCount ?? likeCount - 1);
+        }
+      } else {
+        const res = await eventsAPI.likeEvent(eventId);
+        if (res.success) {
+          setIsLiked(true);
+          setLikeCount(res.likeCount ?? likeCount + 1);
+        }
+      }
+      // Refresh profile to update liked events list
+      try {
+        const profileRes = await authAPI.getProfile();
+        if (profileRes.success && profileRes.user) setUser(profileRes.user);
+      } catch (_) {}
+    } catch (err) {
+      console.error('Like error:', err);
     }
   };
 
@@ -293,7 +313,7 @@ export default function EventDetailsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-[#0F0F0F]">
+    <View className="flex-1 bg-white">
       <ScrollView
         ref={scrollViewRef}
         className="flex-1"
@@ -303,8 +323,8 @@ export default function EventDetailsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#9333EA"
-            colors={["#9333EA"]}
+            tintColor="#DC2626"
+            colors={["#DC2626"]}
           />
         }
       >
@@ -321,35 +341,32 @@ export default function EventDetailsScreen() {
           >
             <MaterialIcons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
-          <TouchableOpacity
-            className="absolute top-[50px] right-5 bg-black/50 w-10 h-10 rounded-full items-center justify-center"
-            onPress={handleLike}
-          >
-            <MaterialIcons
-              name={isLiked ? "favorite" : "favorite-border"}
-              size={20}
-              color={isLiked ? "#EF4444" : "#FFFFFF"}
-            />
-          </TouchableOpacity>
         </View>
 
         {/* Event Info Card */}
-        <View className="bg-[#1F1F1F] rounded-t-3xl p-5 -mt-5">
-          <View className="flex-row justify-between items-start mb-6">
-            <Text className="text-white text-2xl font-bold flex-1 mr-3">{event.title}</Text>
-            <View className="bg-[#374151] py-1.5 px-3 rounded-xl">
-              <Text className="text-[#D1D5DB] text-xs font-semibold">
-                {event.status === 'approved' ? 'Approved' : event.status === 'pending' ? 'Pending' : 'Draft'}
-              </Text>
-            </View>
+        <View className="bg-white rounded-t-3xl p-5 -mt-5 border-t border-gray-200">
+          <View className="flex-row justify-between items-center mb-6">
+            <Text className="text-gray-900 text-2xl font-bold flex-1 mr-3">{event.title}</Text>
+            <TouchableOpacity
+              className="flex-row items-center gap-1.5 bg-gray-100 py-2 px-3 rounded-xl"
+              onPress={handleLike}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons
+                name={isLiked ? "favorite" : "favorite-border"}
+                size={20}
+                color={isLiked ? "#EF4444" : "#9CA3AF"}
+              />
+              <Text className="text-gray-700 text-sm font-semibold">{likeCount}</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Event Date & Time */}
           <View className="flex-row mb-5 items-start">
-            <MaterialIcons name="calendar-today" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+            <MaterialIcons name="calendar-today" size={20} color="#6B7280" style={{ marginRight: 12, marginTop: 2 }} />
             <View className="flex-1">
-              <Text className="text-white text-sm font-semibold mb-1">Event Date & Time</Text>
-              <Text className="text-[#D1D5DB] text-sm mb-0.5">
+              <Text className="text-gray-900 text-sm font-semibold mb-1">Event Date & Time</Text>
+              <Text className="text-gray-700 text-sm mb-0.5">
                 {formatDate(event.date)}, {formatTime(event.time)}
               </Text>
             </View>
@@ -358,10 +375,10 @@ export default function EventDetailsScreen() {
           {/* Location (optional) */}
           {event.location ? (
             <View className="flex-row mb-5 items-start">
-              <MaterialIcons name="location-on" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+              <MaterialIcons name="location-on" size={20} color="#6B7280" style={{ marginRight: 12, marginTop: 2 }} />
               <View className="flex-1">
-                <Text className="text-white text-sm font-semibold mb-1">Location</Text>
-                <Text className="text-[#D1D5DB] text-sm mb-0.5">{event.location}</Text>
+                <Text className="text-gray-900 text-sm font-semibold mb-1">Location</Text>
+                <Text className="text-gray-700 text-sm mb-0.5">{event.location}</Text>
               </View>
             </View>
           ) : null}
@@ -369,20 +386,20 @@ export default function EventDetailsScreen() {
           {/* Gender (optional) */}
           {event.gender ? (
             <View className="flex-row mb-5 items-start">
-              <MaterialIcons name="person-outline" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+              <MaterialIcons name="person-outline" size={20} color="#6B7280" style={{ marginRight: 12, marginTop: 2 }} />
               <View className="flex-1">
-                <Text className="text-white text-sm font-semibold mb-1">Gender</Text>
-                <Text className="text-[#D1D5DB] text-sm mb-0.5 capitalize">{event.gender}</Text>
+                <Text className="text-gray-900 text-sm font-semibold mb-1">Gender</Text>
+                <Text className="text-gray-700 text-sm mb-0.5 capitalize">{event.gender}</Text>
               </View>
             </View>
           ) : null}
 
           {/* Price: event.price { price, currency } or free; fallback ticketPrice */}
           <View className="flex-row mb-5 items-start">
-            <MaterialIcons name="confirmation-number" size={20} color="#9CA3AF" style={{ marginRight: 12, marginTop: 2 }} />
+            <MaterialIcons name="confirmation-number" size={20} color="#6B7280" style={{ marginRight: 12, marginTop: 2 }} />
             <View className="flex-1">
-              <Text className="text-white text-sm font-semibold mb-1">Ticket Price</Text>
-              <Text className="text-[#D1D5DB] text-sm mb-0.5">
+              <Text className="text-gray-900 text-sm font-semibold mb-1">Ticket Price</Text>
+              <Text className="text-gray-700 text-sm mb-0.5">
                 {event.price?.price === 'free' || event.price?.currency === null
                   ? 'Free'
                   : event.price?.currency
@@ -392,7 +409,7 @@ export default function EventDetailsScreen() {
                       : 'Free'}
               </Text>
               {event.totalTickets != null && event.totalTickets > 0 && (
-                <Text className="text-[#9CA3AF] text-xs mt-1">
+                <Text className="text-gray-600 text-xs mt-1">
                   {event.totalTickets} tickets available
                 </Text>
               )}
@@ -401,7 +418,7 @@ export default function EventDetailsScreen() {
 
           {/* Register / Get More Tickets Button */}
           <TouchableOpacity
-            className={`py-4 rounded-xl items-center mt-2 bg-[#9333EA]`}
+            className="py-4 rounded-xl items-center mt-2 bg-primary"
             onPress={handleRegister}
             disabled={creatingTicket}
           >
@@ -418,9 +435,9 @@ export default function EventDetailsScreen() {
 
         {/* Event Description Section (optional) */}
         {event.description ? (
-          <View className="p-5 border-t border-[#1F1F1F]">
-            <Text className="text-white text-xl font-bold mb-3">Event Description</Text>
-            <Text className="text-[#D1D5DB] text-sm leading-6 mb-3">
+          <View className="p-5 border-t border-gray-200 bg-white">
+            <Text className="text-gray-900 text-xl font-bold mb-3">Event Description</Text>
+            <Text className="text-gray-700 text-sm leading-6 mb-3">
               {event.description}
             </Text>
           </View>
@@ -428,18 +445,18 @@ export default function EventDetailsScreen() {
 
         {/* Contact Information */}
         {(event.email || event.phone) && (
-          <View className="p-5 border-t border-[#1F1F1F]">
-            <Text className="text-white text-xl font-bold mb-3">Contact Information</Text>
+          <View className="p-5 border-t border-gray-200 bg-white">
+            <Text className="text-gray-900 text-xl font-bold mb-3">Contact Information</Text>
             {event.email && (
               <View className="flex-row items-center mb-2">
-                <MaterialIcons name="email" size={20} color="#9CA3AF" style={{ marginRight: 12 }} />
-                <Text className="text-[#D1D5DB] text-sm">{event.email}</Text>
+                <MaterialIcons name="email" size={20} color="#6B7280" style={{ marginRight: 12 }} />
+                <Text className="text-gray-700 text-sm">{event.email}</Text>
               </View>
             )}
             {event.phone && (
               <View className="flex-row items-center">
-                <MaterialIcons name="phone" size={20} color="#9CA3AF" style={{ marginRight: 12 }} />
-                <Text className="text-[#D1D5DB] text-sm">{event.phone}</Text>
+                <MaterialIcons name="phone" size={20} color="#6B7280" style={{ marginRight: 12 }} />
+                <Text className="text-gray-700 text-sm">{event.phone}</Text>
               </View>
             )}
           </View>
@@ -447,16 +464,25 @@ export default function EventDetailsScreen() {
 
         {/* Organized By: createdBy or organizerName */}
         {(event.createdBy || event.organizerName) && (
-          <View className="p-5 border-t border-[#1F1F1F]">
-            <Text className="text-white text-xl font-bold mb-3">Organized By</Text>
-            <Text className="text-white text-base font-semibold">
-              {event.createdBy?.fullName ?? event.organizerName ?? '—'}
-            </Text>
+          <View className="p-5 border-t border-gray-200 bg-white">
+            <Text className="text-gray-900 text-xl font-bold mb-3">Organized By</Text>
+            <TouchableOpacity
+              onPress={() => {
+                const organizerId = (event.createdBy as any)?._id || (event as any).organizerId;
+                if (organizerId) router.push(`/user/${organizerId}`);
+              }}
+              activeOpacity={0.7}
+              disabled={!((event.createdBy as any)?._id || (event as any).organizerId)}
+            >
+              <Text className="text-gray-800 text-base font-semibold text-primary">
+                {event.createdBy?.fullName ?? event.organizerName ?? '—'}
+              </Text>
+            </TouchableOpacity>
             {event.createdBy?.email && (
-              <Text className="text-[#9CA3AF] text-sm mt-1">{event.createdBy.email}</Text>
+              <Text className="text-gray-600 text-sm mt-1">{event.createdBy.email}</Text>
             )}
             {event.email && !event.createdBy?.email && (
-              <Text className="text-[#9CA3AF] text-sm mt-1">{event.email}</Text>
+              <Text className="text-gray-600 text-sm mt-1">{event.email}</Text>
             )}
           </View>
         )}
@@ -464,13 +490,13 @@ export default function EventDetailsScreen() {
         {/* User's Tickets Section */}
         {user && userTickets.length > 0 && (
           <View
-            className="p-5 border-t border-[#1F1F1F]"
+            className="p-5 border-t border-gray-200 bg-white"
             onLayout={(event) => {
               const { y } = event.nativeEvent.layout;
               setTicketsSectionY(y);
             }}
           >
-            <Text className="text-white text-xl font-bold mb-4">Your Tickets ({userTickets.length})</Text>
+            <Text className="text-gray-900 text-xl font-bold mb-4">Your Tickets ({userTickets.length})</Text>
             {userTickets.map((ticket: any, ticketIndex: number) => {
               // Get status colors and info
               const getStatusInfo = (status: string) => {
@@ -559,7 +585,7 @@ export default function EventDetailsScreen() {
                             color={statusInfo.iconColor}
                             style={{ marginRight: 8 }}
                           />
-                          <Text className="text-white text-sm font-bold">
+                          <Text className="text-gray-900 text-sm font-bold">
                             Ticket #{ticketId.slice(-8).toUpperCase()}
                           </Text>
                         </View>
@@ -573,21 +599,21 @@ export default function EventDetailsScreen() {
                       {/* Ticket Details */}
                       <View>
                         <View className="flex-row items-center mb-2">
-                          <MaterialIcons name="email" size={14} color="#9CA3AF" style={{ marginRight: 8 }} />
-                          <Text className="text-[#D1D5DB] text-xs flex-1" numberOfLines={1}>
+                          <MaterialIcons name="email" size={14} color="#6B7280" style={{ marginRight: 8 }} />
+                          <Text className="text-gray-700 text-xs flex-1" numberOfLines={1}>
                             {ticket.email}
                           </Text>
                         </View>
                         <View className="flex-row items-center mb-2">
-                          <MaterialIcons name="phone" size={14} color="#9CA3AF" style={{ marginRight: 8 }} />
-                          <Text className="text-[#D1D5DB] text-xs">
+                          <MaterialIcons name="phone" size={14} color="#6B7280" style={{ marginRight: 8 }} />
+                          <Text className="text-gray-700 text-xs">
                             {ticket.phone}
                           </Text>
                         </View>
                         {ticket.createdAt && (
                           <View className="flex-row items-center">
-                            <MaterialIcons name="calendar-today" size={14} color="#9CA3AF" style={{ marginRight: 8 }} />
-                            <Text className="text-[#9CA3AF] text-[10px]">
+                            <MaterialIcons name="calendar-today" size={14} color="#6B7280" style={{ marginRight: 8 }} />
+                            <Text className="text-gray-600 text-[10px]">
                               {new Date(ticket.createdAt).toLocaleDateString('en-US', {
                                 month: 'short',
                                 day: 'numeric',
@@ -601,7 +627,7 @@ export default function EventDetailsScreen() {
 
                     {/* Arrow Icon */}
                     <View className="justify-center">
-                      <MaterialIcons name="chevron-right" size={24} color="#9CA3AF" />
+                      <MaterialIcons name="chevron-right" size={24} color="#6B7280" />
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -677,16 +703,16 @@ export default function EventDetailsScreen() {
         onRequestClose={() => { setShowPhoneModal(false); setPhoneInput(''); }}
       >
         <Pressable className="flex-1 bg-black/70 justify-center items-center p-5" onPress={() => { setShowPhoneModal(false); setPhoneInput(''); }}>
-          <Pressable className="bg-[#1F1F1F] rounded-2xl border border-[#374151] p-6 w-full max-w-[400px]" onPress={(e) => e.stopPropagation()}>
+          <Pressable className="bg-white rounded-2xl border border-gray-200 p-6 w-full max-w-[400px]" onPress={(e) => e.stopPropagation()}>
             <View className="items-center pt-1 pb-3">
-              <View className="w-10 h-1 rounded-full bg-[#4B5563]" />
+              <View className="w-10 h-1 rounded-full bg-gray-300" />
             </View>
-            <Text className="text-white text-xl font-bold mb-2 text-center">Phone Number Required</Text>
-            <Text className="text-[#D1D5DB] text-base leading-6 mb-4 text-center">
+            <Text className="text-gray-900 text-xl font-bold mb-2 text-center">Phone Number Required</Text>
+            <Text className="text-gray-600 text-base leading-6 mb-4 text-center">
               Please enter your phone number to create a ticket
             </Text>
             <TextInput
-              className="bg-[#374151] text-white px-4 py-3 rounded-xl mb-4 border border-[#4B5563]"
+              className="bg-gray-50 text-gray-900 px-4 py-3 rounded-xl mb-4 border border-gray-200"
               placeholder="Enter your phone number"
               placeholderTextColor="#9CA3AF"
               value={phoneInput}
@@ -696,13 +722,13 @@ export default function EventDetailsScreen() {
             />
             <View className="flex-row gap-3">
               <TouchableOpacity
-                className="flex-1 py-3.5 rounded-xl items-center bg-[#2F2F2F] border border-[#374151]"
+                className="flex-1 py-3.5 rounded-xl items-center bg-gray-100 border border-gray-200"
                 onPress={() => { setShowPhoneModal(false); setPhoneInput(''); }}
               >
-                <Text className="text-white text-base font-semibold">Cancel</Text>
+                <Text className="text-gray-900 text-base font-semibold">Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                className="flex-1 py-3.5 rounded-xl items-center bg-[#9333EA]"
+                className="flex-1 py-3.5 rounded-xl items-center bg-primary"
                 onPress={handlePhoneSubmit}
                 disabled={creatingTicket}
               >

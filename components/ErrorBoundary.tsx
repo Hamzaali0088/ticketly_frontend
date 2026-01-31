@@ -48,17 +48,17 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <View style={{ flex: 1, backgroundColor: '#0F0F0F', padding: 20, justifyContent: 'center' }}>
+        <View style={{ flex: 1, backgroundColor: '#FFFFFF', padding: 20, justifyContent: 'center' }}>
           <ScrollView>
             <Text style={{ color: '#EF4444', fontSize: 24, fontWeight: 'bold', marginBottom: 16 }}>
               Something went wrong
             </Text>
-            <Text style={{ color: '#FFFFFF', fontSize: 16, marginBottom: 8 }}>
+            <Text style={{ color: '#111827', fontSize: 16, marginBottom: 8 }}>
               {this.state.error?.message || 'An unexpected error occurred'}
             </Text>
             {__DEV__ && this.state.errorInfo && (
-              <View style={{ marginTop: 16, padding: 12, backgroundColor: '#1F1F1F', borderRadius: 8 }}>
-                <Text style={{ color: '#9CA3AF', fontSize: 12, fontFamily: 'monospace' }}>
+              <View style={{ marginTop: 16, padding: 12, backgroundColor: '#F3F4F6', borderRadius: 8 }}>
+                <Text style={{ color: '#374151', fontSize: 12, fontFamily: 'monospace' }}>
                   {this.state.errorInfo.componentStack}
                 </Text>
               </View>
@@ -68,7 +68,7 @@ export class ErrorBoundary extends Component<Props, State> {
               style={{
                 marginTop: 24,
                 padding: 16,
-                backgroundColor: '#9333EA',
+                backgroundColor: '#DC2626',
                 borderRadius: 8,
                 alignItems: 'center',
               }}>

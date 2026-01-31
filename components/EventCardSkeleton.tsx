@@ -49,16 +49,16 @@ export const EventCardSkeleton: React.FC = () => {
 
 const styles = StyleSheet.create({
   card: {
-    width: '48%',
-    backgroundColor: '#1F1F1F',
-    borderRadius: 12,
+    width: '49%',
+    backgroundColor: '#FFF1F2', // rose-50 (light red)
+    borderRadius: 8,
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   imageBlock: {
     width: '100%',
     height: 150,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#FFE4E6', // rose-100
   },
   pricePill: {
     position: 'absolute',
@@ -67,13 +67,13 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 4,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(220, 38, 38, 0.12)', // primary red @ ~12%
   },
   pricePillInner: {
     width: 36,
     height: 12,
     borderRadius: 4,
-    backgroundColor: '#3F3F3F',
+    backgroundColor: '#FECDD3', // rose-200
   },
   content: {
     padding: 12,
@@ -82,21 +82,21 @@ const styles = StyleSheet.create({
     height: 10,
     width: '55%',
     borderRadius: 4,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#FFE4E6', // rose-100
     marginBottom: 8,
   },
   lineTitle1: {
     height: 12,
     width: '95%',
     borderRadius: 4,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#FFE4E6', // rose-100
     marginBottom: 6,
   },
   lineTitle2: {
     height: 12,
     width: '70%',
     borderRadius: 4,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#FFE4E6', // rose-100
     marginBottom: 10,
   },
   hostRow: {
@@ -107,13 +107,13 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#FFE4E6', // rose-100
     marginRight: 8,
   },
   lineHost: {
     height: 10,
     width: 60,
     borderRadius: 4,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#FFE4E6', // rose-100
   },
 });
